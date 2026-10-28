@@ -14,7 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      responses: {
+        Row: {
+          ai_feedback: string | null
+          answers: Json
+          breakdown: Json
+          created_at: string
+          id: string
+          perception: Json
+          phase: string
+          planets: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          answers?: Json
+          breakdown?: Json
+          created_at?: string
+          id?: string
+          perception?: Json
+          phase: string
+          planets?: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          answers?: Json
+          breakdown?: Json
+          created_at?: string
+          id?: string
+          perception?: Json
+          phase?: string
+          planets?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          class_name: string
+          created_at: string
+          id: string
+          pin_hash: string | null
+          pseudonym: string
+        }
+        Insert: {
+          class_name?: string
+          created_at?: string
+          id?: string
+          pin_hash?: string | null
+          pseudonym: string
+        }
+        Update: {
+          class_name?: string
+          created_at?: string
+          id?: string
+          pin_hash?: string | null
+          pseudonym?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
