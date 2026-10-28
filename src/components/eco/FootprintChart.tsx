@@ -38,7 +38,7 @@ export function FootprintDonut({ breakdown }: { breakdown: Breakdown }) {
             <Pie data={data} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="90%" paddingAngle={3} stroke="none">
               {data.map((d) => <Cell key={d.key} fill={CAT_COLOR[d.key]} />)}
             </Pie>
-            <Tooltip formatter={(v: number) => `${v.toFixed(2)} Terras`} />
+            <Tooltip formatter={(v) => `${Number(v).toFixed(2)} Terras`} />
           </PieChart>
         </ResponsiveContainer>
       </div>

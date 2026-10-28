@@ -21,7 +21,7 @@ export function Questionnaire({ phase, initialPerception, initialAnswers, previo
   const [answers, setAnswers] = useState<Record<string, number>>(initialAnswers ?? {});
   const isPerc = step < PERCEPTION_QUESTIONS.length;
   const q = isPerc ? null : QUESTIONS[step - PERCEPTION_QUESTIONS.length];
-  const canNext = isPerc ? perception[step].trim().length >= 3 : answers[q!.id] !== undefined;
+  const canNext = isPerc ? (perception[step] ?? "").trim().length >= 3 : answers[q!.id] !== undefined;
   const last = step === steps - 1;
 
   return (

@@ -122,7 +122,7 @@ export const regenerateFeedback = createServerFn({ method: "POST" })
 export const teacherLogin = createServerFn({ method: "POST" })
   .inputValidator((d: { password: string }) => d)
   .handler(async ({ data }) => {
-    const pw = process.env.TEACHER_PASSWORD;
+    const pw = process.env["TEACHER_PASSWORD"];
     if (!pw) throw new Error("Senha do professor ainda não configurada.");
     const s = await sess();
     if ((await s.sha256(data.password)) !== (await s.sha256(pw))) throw new Error("Senha incorreta.");
