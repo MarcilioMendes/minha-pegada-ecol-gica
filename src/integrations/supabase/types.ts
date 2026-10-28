@@ -68,6 +68,7 @@ export type Database = {
           id: string
           pin_hash: string | null
           pseudonym: string
+          seed_perception: Json | null
         }
         Insert: {
           class_name?: string
@@ -75,6 +76,7 @@ export type Database = {
           id?: string
           pin_hash?: string | null
           pseudonym: string
+          seed_perception?: Json | null
         }
         Update: {
           class_name?: string
@@ -82,6 +84,7 @@ export type Database = {
           id?: string
           pin_hash?: string | null
           pseudonym?: string
+          seed_perception?: Json | null
         }
         Relationships: []
       }

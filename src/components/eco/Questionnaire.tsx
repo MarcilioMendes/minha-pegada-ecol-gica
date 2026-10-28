@@ -12,9 +12,10 @@ type Props = {
   previousPerception?: string[] | undefined;
   onSubmit: (perception: string[], answers: Record<string, number>) => Promise<void>;
   busy: boolean;
+  imported?: boolean;
 };
 
-export function Questionnaire({ phase, initialPerception, initialAnswers, previousPerception, onSubmit, busy }: Props) {
+export function Questionnaire({ phase, initialPerception, initialAnswers, previousPerception, onSubmit, busy, imported }: Props) {
   const steps = PERCEPTION_QUESTIONS.length + QUESTIONS.length;
   const [step, setStep] = useState(0);
   const [perception, setPerception] = useState<string[]>(initialPerception ?? PERCEPTION_QUESTIONS.map(() => ""));
@@ -26,6 +27,12 @@ export function Questionnaire({ phase, initialPerception, initialAnswers, previo
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      {imported && isPerc && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-secondary p-4 text-sm text-secondary-foreground">
+          <span>📋 Trouxemos as respostas que você já deu na atividade anterior. Leia, ajuste se quiser e siga em frente.</span>
+          <Button size="sm" variant="outline" className="rounded-full" onClick={() => setStep(PERCEPTION_QUESTIONS.length)}>Confirmar e ir para a pegada <ArrowRight /></Button>
+        </div>
+      )}
       <div className="space-y-2">
         <div className="flex justify-between text-sm font-semibold text-muted-foreground">
           <span>{isPerc ? "Parte 1 · Percepção Ambiental" : `Parte 2 · ${CATEGORY_LABEL[q!.category]}`}</span>

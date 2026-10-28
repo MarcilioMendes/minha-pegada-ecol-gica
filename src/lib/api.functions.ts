@@ -28,9 +28,13 @@ export const getMyData = createServerFn({ method: "POST" })
   .inputValidator((d: { token: string }) => d)
   .handler(async ({ data }) => {
     const c = await (await sess()).requireStudent(data.token);
-    const { data: rows } = await (await db()).from("responses").select("*").eq("student_id", c.sid);
+    const sb = await db();
+    const { data: rows } = await sb.from("responses").select("*").eq("student_id", c.sid);
+    const { data: st } = await sb.from("students").select("seed_perception").eq("id", c.sid).maybeSingle();
+    const seed = (st?.seed_perception as { items?: string[] } | null)?.items ?? null;
     return {
       pseudonym: c.p,
+      seedPerception: seed,
       pre: rows?.find((r) => r.phase === "pre") ?? null,
       post: rows?.find((r) => r.phase === "post") ?? null,
     };
@@ -134,10 +138,10 @@ export const teacherOverview = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await (await sess()).requireTeacher(data.token);
     const sb = await db();
-    const { data: students } = await sb.from("students").select("id,pseudonym,class_name,pin_hash").order("pseudonym");
+    const { data: students } = await sb.from("students").select("id,pseudonym,class_name,pin_hash,seed_perception").order("pseudonym");
     const { data: responses } = await sb.from("responses").select("*");
     return {
-      students: (students ?? []).map((s) => ({ id: s.id, pseudonym: s.pseudonym, class_name: s.class_name, hasPin: !!s.pin_hash })),
+      students: (students ?? []).map((s) => ({ id: s.id, pseudonym: s.pseudonym, class_name: s.class_name, hasPin: !!s.pin_hash, seedPerception: (s.seed_perception as { items?: string[] } | null)?.items ?? null })),
       responses: (responses ?? []).map((r) => ({ ...r, planets: Number(r.planets) })),
     };
   });

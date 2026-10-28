@@ -32,7 +32,7 @@ function Aluno() {
   const submit = useServerFn(submitPhase);
   const regen = useServerFn(regenerateFeedback);
   const [token, setToken] = useState<string | null>(null);
-  const [data, setData] = useState<{ pseudonym: string; pre: Resp | null; post: Resp | null } | null>(null);
+  const [data, setData] = useState<{ pseudonym: string; seedPerception: string[] | null; pre: Resp | null; post: Resp | null } | null>(null);
   const [view, setView] = useState<View>("home");
   const [busy, setBusy] = useState(false);
 
@@ -96,7 +96,7 @@ function Aluno() {
           </div>
         )}
 
-        {view === "pre" && <Questionnaire phase="pre" busy={busy} initialPerception={pre ? items(pre.perception) : undefined} initialAnswers={pre?.answers as Record<string, number> | undefined} onSubmit={(p, a) => onSubmit("pre", p, a)} />}
+        {view === "pre" && <Questionnaire phase="pre" busy={busy} initialPerception={pre ? items(pre.perception) : data.seedPerception ?? undefined} imported={!pre && !!data.seedPerception} initialAnswers={pre?.answers as Record<string, number> | undefined} onSubmit={(p, a) => onSubmit("pre", p, a)} />}
         {view === "post" && <Questionnaire phase="post" busy={busy} previousPerception={pre ? items(pre.perception) : undefined} initialAnswers={pre?.answers as Record<string, number> | undefined} onSubmit={(p, a) => onSubmit("post", p, a)} />}
 
         {view === "result-pre" && pre && (

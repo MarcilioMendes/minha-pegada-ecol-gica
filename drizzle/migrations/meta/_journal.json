@@ -8,6 +8,13 @@
       "when": 1793210727932,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793216168031,
+      "tag": "0001_add_seed_perception",
+      "breakpoints": true
     }
   ]
 }
