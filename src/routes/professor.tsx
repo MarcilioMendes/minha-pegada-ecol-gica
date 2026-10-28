@@ -149,7 +149,7 @@ function Professor() {
                       <td className="p-3">{pre ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{post ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{pre ? `${pre.planets.toFixed(1)}${post ? ` → ${post.planets.toFixed(1)}` : ""}` : "—"}</td>
-                      <td className="p-3">{pre && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
+                      <td className="p-3">{(pre || s.seedPerception) && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
                     </tr>
                   );
                 })}
@@ -171,6 +171,14 @@ function Professor() {
       <Dialog open={!!sel} onOpenChange={(o) => !o && setSel(null)}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader><DialogTitle>{selStudent?.pseudonym}</DialogTitle></DialogHeader>
+          {selStudent?.seedPerception && (
+            <section className="space-y-2 border-b pb-6">
+              <h3 className="text-xl font-bold">Percepção importada da planilha</h3>
+              {PERCEPTION_QUESTIONS.map((q, i) => (
+                <div key={i} className="rounded-xl bg-muted p-3 text-sm"><p className="font-semibold">{q}</p><p className="whitespace-pre-line">{selStudent.seedPerception?.[i]}</p></div>
+              ))}
+            </section>
+          )}
           {(["pre", "post"] as const).map((ph) => {
             const r = selResp.find((x) => x.phase === ph);
             if (!r) return null;
