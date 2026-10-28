@@ -2,7 +2,7 @@
 const enc = new TextEncoder();
 
 async function key() {
-  const secret = process.env.SESSION_SECRET;
+  const secret = process.env["SESSION_SECRET"];
   if (!secret) throw new Error("SESSION_SECRET ausente");
   return crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 }
@@ -14,7 +14,7 @@ export async function sha256(text: string) {
 }
 
 export async function hashPin(pseudonym: string, pin: string) {
-  return sha256(`${process.env.SESSION_SECRET}:${pseudonym}:${pin}`);
+  return sha256(`${process.env["SESSION_SECRET"]}:${pseudonym}:${pin}`);
 }
 
 export type Claims = { role: "student"; sid: string; p: string } | { role: "teacher" };
