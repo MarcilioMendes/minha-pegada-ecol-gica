@@ -7,9 +7,9 @@ import { ArrowLeft, ArrowRight, Leaf } from "lucide-react";
 
 type Props = {
   phase: "pre" | "post";
-  initialPerception?: string[];
-  initialAnswers?: Record<string, number>;
-  previousPerception?: string[];
+  initialPerception?: string[] | undefined;
+  initialAnswers?: Record<string, number> | undefined;
+  previousPerception?: string[] | undefined;
   onSubmit: (perception: string[], answers: Record<string, number>) => Promise<void>;
   busy: boolean;
 };

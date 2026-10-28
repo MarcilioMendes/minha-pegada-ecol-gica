@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import { Sparkles } from "lucide-react";
 
-export function Feedback({ text, onRetry, busy }: { text: string | null; onRetry?: () => void; busy?: boolean }) {
+export function Feedback({ text, onRetry, busy }: { text: string | null; onRetry?: (() => void) | undefined; busy?: boolean | undefined }) {
   return (
     <div className="rounded-3xl border-2 border-primary/20 bg-card p-6 shadow-soft">
       <div className="mb-3 flex items-center gap-2 text-primary">
