@@ -58,7 +58,7 @@ const Q18: V4 = [90, 170, 220, 250];
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
 export function computeCarbon(a: Record<string, number>): { total: number; breakdown: CarbonBreakdown } {
-  const g = (id: string, t: V4) => t[a[id] ?? 0];
+  const g = (id: string, t: V4): number => t[a[id] ?? 0] ?? t[0];
   const n = g("q0", N);
   const alimentacao = (400 + g("q1", Q1) + g("q2", Q2) + g("q3", Q3) + g("q4", Q4)) * g("q6", M6);
   const transporte = 2 * g("q7b", D7B) * 200 * g("q7", F7) + g("q8", Q8) / n;

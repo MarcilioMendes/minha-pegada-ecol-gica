@@ -194,7 +194,7 @@ export const submitCarbon = createServerFn({ method: "POST" })
       const v = data.answers[q.id];
       if (typeof v !== "number" || v < 0 || v > 3) throw new Error("Responda todas as perguntas.");
     }
-    const answers = Object.fromEntries(CARBON_QUESTIONS.map((q) => [q.id, data.answers[q.id]]));
+    const answers: Record<string, number> = Object.fromEntries(CARBON_QUESTIONS.map((q) => [q.id, data.answers[q.id] ?? 0]));
     const { total, breakdown } = computeCarbon(answers);
     const { error } = await (await db()).from("carbon_responses").upsert(
       { student_id: c.sid, answers, total_kg: total, breakdown, updated_at: new Date().toISOString() }, { onConflict: "student_id" });
