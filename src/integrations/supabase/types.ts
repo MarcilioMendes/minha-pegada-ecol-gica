@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      carbon_responses: {
+        Row: {
+          answers: Json
+          breakdown: Json
+          id: string
+          student_id: string
+          total_kg: number
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          breakdown?: Json
+          id?: string
+          student_id: string
+          total_kg?: number
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          breakdown?: Json
+          id?: string
+          student_id?: string
+          total_kg?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carbon_responses_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       responses: {
         Row: {
           ai_feedback: string | null

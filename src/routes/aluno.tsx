@@ -3,7 +3,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { getMyData, submitPhase, regenerateFeedback } from "@/lib/api.functions";
+import { getMyData, submitPhase, regenerateFeedback, getMyCarbon, submitCarbon } from "@/lib/api.functions";
+import { CarbonQuiz, CarbonResult } from "@/components/eco/Carbon";
+import type { CarbonBreakdown } from "@/lib/carbon";
 import { Questionnaire } from "@/components/eco/Questionnaire";
 import { FootprintDonut, Planets, CAT_COLOR } from "@/components/eco/FootprintChart";
 import { Feedback } from "@/components/eco/Feedback";
@@ -23,7 +25,7 @@ export const Route = createFileRoute("/aluno")({
 });
 
 type Resp = { perception: unknown; answers: unknown; planets: number | string; breakdown: unknown; ai_feedback: string | null };
-type View = "home" | "pre" | "post" | "result-pre" | "result-post" | "compare";
+type View = "home" | "pre" | "post" | "result-pre" | "result-post" | "compare" | "carbon" | "result-carbon";
 const items = (p: unknown) => (p as { items?: string[] })?.items ?? [];
 
 function Aluno() {
@@ -35,11 +37,14 @@ function Aluno() {
   const [data, setData] = useState<{ pseudonym: string; seedPerception: string[] | null; pre: Resp | null; post: Resp | null } | null>(null);
   const [view, setView] = useState<View>("home");
   const [busy, setBusy] = useState(false);
+  const fetchCarbon = useServerFn(getMyCarbon);
+  const sendCarbon = useServerFn(submitCarbon);
+  const [carbon, setCarbon] = useState<{ mine: { answers: Record<string, number>; total: number; breakdown: CarbonBreakdown } | null; classK: number; classSum: number } | null>(null);
 
   const load = useCallback(async (t: string) => {
-    try { setData(await fetchData({ data: { token: t } })); }
+    try { setData(await fetchData({ data: { token: t } })); setCarbon(await fetchCarbon({ data: { token: t } })); }
     catch { localStorage.removeItem("pe_student"); nav({ to: "/" }); }
-  }, [fetchData, nav]);
+  }, [fetchData, fetchCarbon, nav]);
 
   useEffect(() => {
     const t = localStorage.getItem("pe_student");
@@ -56,6 +61,14 @@ function Aluno() {
       setView(phase === "pre" ? "result-pre" : "compare");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  }
+
+  async function onCarbon(answers: Record<string, number>) {
+    if (!token) return;
+    setBusy(true);
+    try { await sendCarbon({ data: { token, answers } }); await load(token); setView("result-carbon"); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    catch (e) { toast.error((e as Error).message); }
     finally { setBusy(false); }
   }
 
@@ -86,12 +99,14 @@ function Aluno() {
         {view === "home" && (
           <div className="space-y-6">
             <h1 className="text-3xl font-extrabold sm:text-4xl">Olá, {data.pseudonym}! 👋</h1>
-            <p className="text-lg text-muted-foreground">Sua jornada tem duas etapas. Vamos lá?</p>
-            <div className="grid gap-5 md:grid-cols-2">
+            <p className="text-lg text-muted-foreground">Sua jornada tem três etapas. Vamos lá?</p>
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               <PhaseCard n={1} title="Diagnóstico Inicial" desc="Antes da aula: reflexão + questionário de hábitos." done={!!pre}
                 action={pre ? <><Button onClick={() => setView("result-pre")}>Ver resultado</Button><Button variant="outline" onClick={() => setView("pre")}>Refazer</Button></> : <Button size="lg" onClick={() => setView("pre")}>Começar 🚀</Button>} />
               <PhaseCard n={2} title="Depois da Aula" desc="Revisite sua reflexão, reavalie seus hábitos e compare." done={!!post} locked={!pre}
                 action={post ? <><Button onClick={() => setView("compare")}>Antes vs. Depois</Button><Button variant="outline" onClick={() => setView("post")}>Refazer</Button></> : <Button size="lg" disabled={!pre} onClick={() => setView("post")}>Começar 🌱</Button>} />
+              <PhaseCard n={3} title="Calculadora de Carbono" desc="Quanto CO₂ você emite por ano? Compare com celebridades, a turma e o Brasil." done={!!carbon?.mine}
+                action={carbon?.mine ? <><Button onClick={() => setView("result-carbon")}>Ver resultado</Button><Button variant="outline" onClick={() => setView("carbon")}>Refazer</Button></> : <Button size="lg" onClick={() => setView("carbon")}>Começar 🌎</Button>} />
             </div>
           </div>
         )}
@@ -104,11 +119,20 @@ function Aluno() {
             footer={<Button size="lg" className="rounded-full" onClick={() => setView("home")}>Voltar ao início</Button>} />
         )}
 
+        {view === "carbon" && <CarbonQuiz busy={busy} initial={carbon?.mine?.answers} onSubmit={onCarbon} />}
+        {view === "result-carbon" && carbon?.mine && (
+          <div className="space-y-6">
+            <h1 className="text-3xl font-extrabold">Sua pegada de carbono 🌎</h1>
+            <CarbonResult total={carbon.mine.total} breakdown={carbon.mine.breakdown} classK={carbon.classK} classSum={carbon.classSum} />
+            <Button size="lg" className="rounded-full" onClick={() => setView("home")}>Voltar ao início</Button>
+          </div>
+        )}
+
         {view === "compare" && pre && post && (
           <div className="space-y-8">
             <h1 className="text-3xl font-extrabold">Antes vs. Depois 🌱➡️🌳</h1>
             <DiffBanner before={Number(pre.planets)} after={Number(post.planets)} />
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {[["Antes", pre], ["Depois", post]].map(([label, r]) => {
                 const rr = r as Resp;
                 return (
