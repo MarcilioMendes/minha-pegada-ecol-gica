@@ -15,6 +15,13 @@
       "when": 1793216168031,
       "tag": "0001_add_seed_perception",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793279906570,
+      "tag": "0002_carbon_responses",
+      "breakpoints": true
     }
   ]
 }
