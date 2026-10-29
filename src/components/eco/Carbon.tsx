@@ -12,7 +12,7 @@ const STAGE_COLOR: Record<Stage, string> = {
   energia: "var(--chart-3)", consumo: "var(--chart-4)", residuos: "var(--muted-foreground)",
 };
 
-export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<string, number>; busy: boolean; onSubmit: (a: Record<string, number>) => void }) {
+export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<string, number> | undefined; busy: boolean; onSubmit: (a: Record<string, number>) => void }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>(initial ?? {});
   const q = CARBON_QUESTIONS[step]!;
