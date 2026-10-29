@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin } from "@/lib/api.functions";
+import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin, teacherCarbon } from "@/lib/api.functions";
 import { CATEGORY_LABEL, PERCEPTION_QUESTIONS, QUESTIONS, topCategory, type Breakdown, type Category } from "@/lib/footprint";
 import { Planets, FootprintDonut } from "@/components/eco/FootprintChart";
+import { formatKg, STAGE_LABEL, CARBON_QUESTIONS, CELEBRITIES, type Stage } from "@/lib/carbon";
 import { Feedback } from "@/components/eco/Feedback";
 import { Download, LogOut, UserPlus, Check, Minus } from "lucide-react";
 
@@ -38,11 +39,13 @@ function Professor() {
   const [data, setData] = useState<Overview | null>(null);
   const [sel, setSel] = useState<string | null>(null);
   const [newList, setNewList] = useState("");
+  const carbonFn = useServerFn(teacherCarbon);
+  const [carbon, setCarbon] = useState<Awaited<ReturnType<typeof teacherCarbon>>>([]);
 
   const load = useCallback(async (t: string) => {
-    try { setData(await overviewFn({ data: { token: t } })); }
+    try { setData(await overviewFn({ data: { token: t } })); setCarbon(await carbonFn({ data: { token: t } })); }
     catch { localStorage.removeItem("pe_teacher"); setToken(null); }
-  }, [overviewFn]);
+  }, [overviewFn, carbonFn]);
 
   useEffect(() => {
     const t = localStorage.getItem("pe_teacher");
@@ -125,6 +128,21 @@ function Professor() {
           <Stat label="Categoria de maior impacto" value={stats.top ? CATEGORY_LABEL[stats.top] : "—"} />
         </div>
 
+        {carbon.length > 0 && (() => {
+          const sum = carbon.reduce((a, c) => a + c.total, 0);
+          const st = Object.keys(STAGE_LABEL) as Stage[];
+          return (
+            <div className="space-y-3 rounded-3xl bg-card p-6 shadow-soft">
+              <h2 className="text-xl font-bold">🌎 Calculadora de carbono · {carbon.length} resposta(s)</h2>
+              <p>Turma: <b>{formatKg(sum)}</b> CO₂e/ano · média <b>{formatKg(sum / carbon.length)}</b> por aluno · equivale a {(sum / 9642).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} brasileiros médios.</p>
+              <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                {st.map((k) => <div key={k} className="rounded-xl bg-muted p-3 text-sm"><p className="font-semibold">{STAGE_LABEL[k]}</p><p>{formatKg(carbon.reduce((a, c) => a + c.breakdown[k], 0) / carbon.length)}</p></div>)}
+              </div>
+              <p className="text-sm text-muted-foreground">A turma levaria {(CELEBRITIES[1]!.kg / sum).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} anos para emitir o que o jato da Taylor Swift emitiu em ~200 dias de 2022.</p>
+            </div>
+          );
+        })()}
+
         {stats.pre.length > 0 && (
           <div className="rounded-3xl bg-card p-6 shadow-soft">
             <h2 className="mb-4 text-xl font-bold">Distribuição média da turma (Pré)</h2>
@@ -136,7 +154,7 @@ function Professor() {
           <div className="overflow-x-auto rounded-3xl bg-card shadow-soft">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left"><tr>
-                <th className="p-3">Aluno</th><th className="p-3">PIN</th><th className="p-3">Pré</th><th className="p-3">Pós</th><th className="p-3">Terras</th><th className="p-3"></th>
+                <th className="p-3">Aluno</th><th className="p-3">PIN</th><th className="p-3">Pré</th><th className="p-3">Pós</th><th className="p-3">Terras</th><th className="p-3">CO₂/ano</th><th className="p-3"></th>
               </tr></thead>
               <tbody>
                 {data.students.map((s) => {
@@ -149,7 +167,8 @@ function Professor() {
                       <td className="p-3">{pre ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{post ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{pre ? `${pre.planets.toFixed(1)}${post ? ` → ${post.planets.toFixed(1)}` : ""}` : "—"}</td>
-                      <td className="p-3">{(pre || s.seedPerception) && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
+                      <td className="p-3">{(() => { const c = carbon.find((x) => x.student_id === s.id); return c ? formatKg(c.total) : "—"; })()}</td>
+                      <td className="p-3">{(pre || s.seedPerception || carbon.some((x) => x.student_id === s.id)) && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
                     </tr>
                   );
                 })}
@@ -179,6 +198,17 @@ function Professor() {
               ))}
             </section>
           )}
+          {(() => {
+            const c = carbon.find((x) => x.student_id === sel);
+            if (!c) return null;
+            return (
+              <section className="space-y-3 border-b pb-6">
+                <h3 className="text-xl font-bold">Calculadora de carbono · {formatKg(c.total)}/ano</h3>
+                <div className="flex flex-wrap gap-2 text-sm">{(Object.keys(STAGE_LABEL) as Stage[]).map((k) => <span key={k} className="rounded-full bg-muted px-3 py-1">{STAGE_LABEL[k]}: {formatKg(c.breakdown[k])}</span>)}</div>
+                <ul className="grid gap-1 text-sm sm:grid-cols-2">{CARBON_QUESTIONS.map((q) => <li key={q.id}><b>{q.id.toUpperCase()}:</b> {q.options[c.answers[q.id] ?? 0]}</li>)}</ul>
+              </section>
+            );
+          })()}
           {(["pre", "post"] as const).map((ph) => {
             const r = selResp.find((x) => x.phase === ph);
             if (!r) return null;
