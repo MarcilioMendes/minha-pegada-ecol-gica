@@ -48,7 +48,7 @@ function Index() {
         <div className="mx-auto max-w-5xl">
           <p className="mb-3 inline-block rounded-full bg-background/20 px-3 py-1 text-sm font-bold">🌱 8º ano · Turma 81</p>
           <h1 className="max-w-2xl text-4xl font-extrabold leading-tight sm:text-6xl">Quantas Terras você usa?</h1>
-          <p className="mt-4 max-w-xl text-lg opacity-90">Reflita sobre o meio ambiente, descubra sua Pegada Ecológica e receba missões criadas por uma IA só para você.</p>
+          <p className="mt-4 max-w-xl text-lg opacity-90">Reflita sobre o meio ambiente, descubra sua Pegada Ecológica e compare a sua pegada com de com outras figuras.</p>
         </div>
       </section>
       <section className="mx-auto -mt-16 grid max-w-5xl gap-6 px-4 pb-16 md:grid-cols-[1.2fr_1fr]">
