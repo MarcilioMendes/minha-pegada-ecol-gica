@@ -1,13 +1,6 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import type { Area, Category } from "@/lib/footprint";
+import type { Area } from "@/lib/footprint";
 import type { Stage } from "@/lib/carbon";
-
-export const CAT_COLOR: Record<Category, string> = {
-  alimentacao: "var(--chart-1)",
-  transporte: "var(--chart-2)",
-  energia: "var(--chart-3)",
-  consumo: "var(--chart-4)",
-};
 
 export const AREA_COLOR: Record<Area, string> = {
   cultivo: "var(--chart-1)",
