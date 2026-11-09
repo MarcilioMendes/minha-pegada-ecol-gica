@@ -55,6 +55,9 @@ const Q16: V4 = [15, 24, 40, 80];
 const Q17: V4 = [0, 30, 80, 150];
 const Q18: V4 = [90, 170, 220, 250];
 
+/** Tabelas de alimentação (kg CO₂e/ano por alternativa), reaproveitadas pela pegada ecológica. */
+export const FOOD_TABLES = { base: 400, q1: Q1, q2: Q2, q3: Q3, q4: Q4, q6: M6 } as const;
+
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
 export function computeCarbon(a: Record<string, number>): { total: number; breakdown: CarbonBreakdown } {
@@ -100,3 +103,79 @@ export const CELEBRITIES: Celebrity[] = [
 // SEEG 2025, por habitante (kg CO2e/ano).
 export const BRASIL = { agro: 2935, usoTerra: 3816, energia: 2000, residuos: 449, industria: 442, bruto: 9642, remocoes: 3056 };
 export const CLASS_SIZE = 30;
+
+// ---------- Comparação com celebridades (modelo "Pegada da Turma") ----------
+export type CelebEvent = {
+  id: string;
+  rotulo?: string;   // nome curto do evento, quando a celebridade tem mais de um
+  desc: string;
+  E: number;         // kg CO₂ do registro
+  dias?: number;     // duração do registro (permite média por dia)
+  horas?: number;    // horas de voo do registro
+  freq?: number;     // viagens por mês sugeridas (evento de uma viagem que se repete)
+  unidade?: string;  // nome da viagem no plural ("trechos", "bate-voltas")
+  unico?: boolean;   // viagem única: só dá para comparar a viagem inteira
+  supoe?: string;    // suposição feita sobre o período
+  fonte: string;
+};
+export type Celeb = { id: string; nome: string; eventos: CelebEvent[] };
+
+export const CELEBS: Celeb[] = [
+  { id: "neymar", nome: "Neymar", eventos: [
+    { id: "heli", rotulo: "Helicóptero para o treino", desc: "1 trecho de helicóptero Mangaratiba → Santos", E: 620, horas: 1, freq: 4, unidade: "trechos", fonte: "UOL Ecoa, 6 fev. 2025 (estimativa de pesquisador). Tempo de voo aproximado." },
+    { id: "b747", rotulo: "Boeing 747 sozinho", desc: "1 viagem sozinho num Boeing 747 até a Arábia Saudita", E: 230000, unico: true, fonte: "Reportagem de 2023, fonte original a confirmar. Tempo de voo não informado." },
+  ] },
+  { id: "virginia", nome: "Virginia Fonseca", eventos: [
+    { id: "bv", rotulo: "Bate-volta para treinar", desc: "1 bate-volta de jatinho São Paulo → Goiás para treinar na academia", E: 6249.6, horas: 2.667, freq: 4, unidade: "bate-voltas", fonte: "Cessna Citation Sovereign: 930 L/h × 2,667 h = 2.480 L de querosene × 2,52 kg CO₂/L. O mesmo texto cita 6,7 t; usamos o valor com cálculo." },
+  ] },
+  { id: "trump", nome: "Donald Trump", eventos: [
+    { id: "y", desc: "voos de jato particular registrados na lista", E: 35380000, dias: 365, supoe: "Período não informado: supomos que a lista cubra 1 ano.", fonte: "Lista de celebridades 2025–2026. Período e fonte original não informados." },
+  ] },
+  { id: "travis", nome: "Travis Scott", eventos: [
+    { id: "y", desc: "137 voos de jatinho de janeiro a novembro de 2023", E: 6061300, dias: 334, fonte: "Ranking de jatos particulares, jan–nov 2023. Outra lista (2025–2026) cita 14.775 t." },
+  ] },
+  { id: "kim", nome: "Kim Kardashian", eventos: [
+    { id: "y", desc: "165 voos de jatinho de janeiro a novembro de 2023", E: 5857600, dias: 334, fonte: "Ranking de jatos particulares, jan–nov 2023. Outra lista (2025–2026) cita 6.579 t." },
+  ] },
+  { id: "musk", nome: "Elon Musk", eventos: [
+    { id: "y", desc: "150 voos de jatinho de janeiro a novembro de 2023", E: 4564700, dias: 334, fonte: "Ranking de jatos particulares, jan–nov 2023. Outra lista (2025–2026) cita 5.705 t, uma aeronave." },
+  ] },
+  { id: "alok", nome: "Alok", eventos: [
+    { id: "y", desc: "36 voos em 2023", E: 29300, dias: 365, fonte: "Ranking de influenciadores 2023. O valor por km é baixo para jatinho; a metodologia precisa ser confirmada." },
+  ] },
+  { id: "taylor", nome: "Taylor Swift", eventos: [
+    { id: "y", desc: "170 voos do jato dela entre 1º de janeiro e 19 de julho de 2022", E: 8293540, dias: 200, horas: 382.05, fonte: "Yard (2022), com dados do perfil @CelebJets. A equipe dela afirma que o jato era emprestado a outras pessoas." },
+  ] },
+];
+
+/** Ritmo médio da celebridade em kg/dia, ou null quando não dá para calcular (viagem única ou 0 viagens). */
+export function celebRate(ev: CelebEvent, freq?: number): number | null {
+  if (ev.dias) return ev.E / ev.dias;
+  if (ev.unico) return null;
+  if (ev.freq != null) {
+    const f = freq ?? ev.freq;
+    return f > 0 ? (ev.E * f * 12) / 365 : null;
+  }
+  return null;
+}
+
+const nf = (v: number, d = 0) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/** Converte uma duração em dias para a unidade mais legível (segundos … anos). */
+export function duration(days: number): { v: string; u: string } {
+  const s = days * 86400;
+  if (s < 1) return { v: "menos de 1", u: "segundo" };
+  if (s < 60) return { v: s < 10 ? nf(s, 1) : nf(s, 0), u: s < 2 ? "segundo" : "segundos" };
+  if (s < 3600) { const m = s / 60; return { v: m < 10 ? nf(m, 1) : nf(m, 0), u: m < 2 ? "minuto" : "minutos" }; }
+  if (days < 1) { const h = s / 3600; return { v: h < 10 ? nf(h, 1) : nf(h, 0), u: h < 2 ? "hora" : "horas" }; }
+  if (days < 365) return { v: days < 10 ? nf(days, 1) : nf(days, 0), u: days < 2 ? "dia" : "dias" };
+  const y = days / 365;
+  return { v: y < 10 ? nf(y, 1) : nf(y, 0), u: y < 2 ? "ano" : "anos" };
+}
+export const durationText = (days: number) => { const d = duration(days); return `${d.v} ${d.u}`; };
+
+/** Equivalência com um carro (0,13 kg CO₂/km) e com voltas na Terra (40.075 km). */
+export function carEquivalent(kg: number): { km: number; laps: number } {
+  const km = kg / 0.13;
+  return { km: Math.round(km / 100) * 100, laps: km / 40075 };
+}
