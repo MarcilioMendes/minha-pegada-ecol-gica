@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { computeFootprint, QUESTIONS, PERCEPTION_QUESTIONS, CATEGORY_LABEL, computeEcological, aggregateClass, type Breakdown } from "./footprint";
-import { computeCarbon, CARBON_QUESTIONS, type CarbonBreakdown } from "./carbon";
+import { PERCEPTION_QUESTIONS, AREA_LABEL, computeEcological, aggregateClass, type EcoResult } from "./footprint";
+import { computeCarbon, CARBON_QUESTIONS, STAGE_LABEL, topKey, type CarbonBreakdown } from "./carbon";
 
 const db = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 const sess = () => import("./session.server");
@@ -27,6 +27,10 @@ export const studentLogin = createServerFn({ method: "POST" })
 
 // Só a reflexão sai para a tela: as colunas antigas (answers, planets, breakdown) não são mais lidas.
 const perceptionOf = (r: { perception: unknown } | undefined) => (r ? { perception: r.perception as { items?: string[] } } : null);
+const perceptionItems = (p: unknown) => (p as { items?: string[] } | null)?.items ?? [];
+// Linha antiga: ainda guarda as 10 perguntas de hábitos, e o feedback foi gerado a partir delas.
+const isLegacyRow = (r: { answers: unknown }) => Object.keys((r.answers ?? {}) as object).length > 0;
+const currentFeedback = (r: { answers: unknown; ai_feedback: string | null } | undefined) => (r && !isLegacyRow(r) ? r.ai_feedback : null);
 
 export const getMyData = createServerFn({ method: "POST" })
   .inputValidator((d: { token: string }) => d)
@@ -40,6 +44,7 @@ export const getMyData = createServerFn({ method: "POST" })
       pseudonym: c.p,
       seedPerception: seed,
       pre: perceptionOf(rows?.find((r) => r.phase === "pre")),
+      feedback: currentFeedback(rows?.find((r) => r.phase === "pre")),
       post: perceptionOf(rows?.find((r) => r.phase === "post")),
     };
   });
@@ -54,12 +59,10 @@ function extractText(res: unknown): string {
     .join("\n");
 }
 
-async function aiFeedback(phase: "pre" | "post", perception: string[], answers: Record<string, number>, planets: number, breakdown: Breakdown, previous?: { planets: number; perception: string[] }) {
+async function aiFeedback(perception: string[], answers: Record<string, number>, total: number, breakdown: CarbonBreakdown, eco: EcoResult) {
   const { generateResponse } = await import("@lovable.dev/ai-gateway");
-  const habits = QUESTIONS.map((q) => `- (${CATEGORY_LABEL[q.category]}) ${q.text} → ${q.options.find((o) => o.score === answers[q.id])?.label ?? "sem resposta"}`).join("\n");
+  const habits = CARBON_QUESTIONS.map((q) => `- (${q.stage === "contexto" ? "Contexto" : STAGE_LABEL[q.stage]}) ${q.text} → ${q.options[answers[q.id] ?? -1] ?? "sem resposta"}`).join("\n");
   const refl = PERCEPTION_QUESTIONS.map((q, i) => `${i + 1}. ${q}\nResposta: ${perception[i] || "(em branco)"}`).join("\n");
-  const dist = Object.entries(breakdown).map(([k, v]) => `${CATEGORY_LABEL[k as keyof Breakdown]}: ${v}`).join(", ");
-  const compare = previous ? `\n\nCOMPARATIVO: No diagnóstico inicial o aluno precisava de ${previous.planets} Terras; agora ${planets}. Reflexão inicial sobre a preocupação: "${previous.perception[0] ?? ""}". Destaque o amadurecimento da reflexão e as mudanças de hábito.` : "";
   const instructions = `Você é um educador ambiental que conversa com alunos do 8º ano (13-14 anos) no Brasil. Tom: encorajador, empático, acolhedor e socrático (faça perguntas que estimulem o pensamento). Nunca julgue nem culpe o aluno ou a família; reconheça que muitos hábitos dependem dos adultos e do contexto. Linguagem simples, frases curtas, em português do Brasil. Não invente dados pessoais.
 Estrutura obrigatória em Markdown:
 ## 🌱 O que eu percebi
@@ -71,7 +74,7 @@ Estrutura obrigatória em Markdown:
 ## 🎯 Suas missões
 (2 a 3 missões práticas, realistas e específicas para o cotidiano de um adolescente, em lista numerada)
 Máximo de ~250 palavras.`;
-  const input = `FASE: ${phase === "pre" ? "Diagnóstico inicial" : "Pós-intervenção"}\n\nREFLEXÃO DO ALUNO:\n${refl}\n\nHÁBITOS:\n${habits}\n\nRESULTADO: ${planets} Planetas Terra. Distribuição: ${dist}.${compare}`;
+  const input = `REFLEXÃO DO ALUNO:\n${refl}\n\nHÁBITOS:\n${habits}\n\nRESULTADO: ${total} kg CO₂e/ano. Pegada ecológica: ${eco.planets} Terras (${eco.gha} gha). Etapa de maior impacto: ${STAGE_LABEL[topKey(breakdown)]}. Área de maior impacto: ${AREA_LABEL[topKey(eco.byArea)]}.`;
   try {
     const res = await generateResponse({ model: "openai/gpt-6-astra", instructions, input });
     return extractText(res).trim() || null;
@@ -103,19 +106,17 @@ export const submitPhase = createServerFn({ method: "POST" })
   });
 
 export const regenerateFeedback = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; phase: "pre" | "post" }) => d)
+  .inputValidator((d: { token: string }) => d)
   .handler(async ({ data }) => {
     const c = await (await sess()).requireStudent(data.token);
     const sb = await db();
-    const { data: rows } = await sb.from("responses").select("*").eq("student_id", c.sid);
-    const cur = rows?.find((r) => r.phase === data.phase);
-    if (!cur) throw new Error("Resposta não encontrada");
-    const pre = rows?.find((r) => r.phase === "pre");
-    const items = (x: unknown) => (x as { items?: string[] }).items ?? [];
-    const fb = await aiFeedback(data.phase, items(cur.perception), cur.answers as Record<string, number>, Number(cur.planets), cur.breakdown as Breakdown,
-      data.phase === "post" && pre ? { planets: Number(pre.planets), perception: items(pre.perception) } : undefined);
+    const { data: pre } = await sb.from("responses").select("id,perception").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
+    const { data: carbon } = await sb.from("carbon_responses").select("answers,total_kg,breakdown").eq("student_id", c.sid).maybeSingle();
+    if (!pre || !carbon) throw new Error("Resposta não encontrada");
+    const answers = carbon.answers as Record<string, number>;
+    const fb = await aiFeedback(perceptionItems(pre.perception), answers, Number(carbon.total_kg), carbon.breakdown as CarbonBreakdown, computeEcological(answers));
     if (!fb) throw new Error("A IA não respondeu agora. Tente em instantes.");
-    await sb.from("responses").update({ ai_feedback: fb }).eq("id", cur.id);
+    await sb.from("responses").update({ ai_feedback: fb, answers: {} }).eq("id", pre.id);
     return { ai_feedback: fb };
   });
 
@@ -191,10 +192,16 @@ export const submitCarbon = createServerFn({ method: "POST" })
     }
     const answers: Record<string, number> = Object.fromEntries(CARBON_QUESTIONS.map((q) => [q.id, data.answers[q.id] ?? 0]));
     const { total, breakdown } = computeCarbon(answers);
-    const { error } = await (await db()).from("carbon_responses").upsert(
+    const sb = await db();
+    const { data: pre } = await sb.from("responses").select("id,perception").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
+    if (!pre) throw new Error("Faça primeiro a Percepção Ambiental.");
+    const { error } = await sb.from("carbon_responses").upsert(
       { student_id: c.sid, answers, total_kg: total, breakdown, updated_at: new Date().toISOString() }, { onConflict: "student_id" });
     if (error) throw new Error("Não foi possível salvar. Tente de novo.");
-    return { total, breakdown };
+    const eco = computeEcological(answers);
+    const ai_feedback = await aiFeedback(perceptionItems(pre.perception), answers, total, breakdown, eco);
+    await sb.from("responses").update({ ai_feedback, answers: {} }).eq("id", pre.id);
+    return { total, breakdown, eco, ai_feedback };
   });
 
 export const teacherCarbon = createServerFn({ method: "POST" })

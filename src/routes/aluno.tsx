@@ -3,9 +3,10 @@ import { useEffect, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { getMyData, submitPhase, getMyCarbon, submitCarbon } from "@/lib/api.functions";
+import { getMyData, submitPhase, regenerateFeedback, getMyCarbon, submitCarbon } from "@/lib/api.functions";
 import { CarbonQuiz, CarbonResult } from "@/components/eco/Carbon";
 import { Questionnaire } from "@/components/eco/Questionnaire";
+import { Feedback } from "@/components/eco/Feedback";
 import { LogOut, CheckCircle2, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/aluno")({
@@ -30,6 +31,7 @@ function Aluno() {
   const nav = useNavigate();
   const fetchData = useServerFn(getMyData);
   const submit = useServerFn(submitPhase);
+  const regen = useServerFn(regenerateFeedback);
   const [token, setToken] = useState<string | null>(null);
   const [data, setData] = useState<Awaited<ReturnType<typeof getMyData>> | null>(null);
   const [view, setView] = useState<View>("home");
@@ -66,6 +68,14 @@ function Aluno() {
     if (!token) return;
     setBusy(true);
     try { await sendCarbon({ data: { token, answers } }); await load(token); setView("result-carbon"); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  }
+
+  async function onRegen() {
+    if (!token) return;
+    setBusy(true);
+    try { await regen({ data: { token } }); await load(token); }
     catch (e) { toast.error((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -113,6 +123,7 @@ function Aluno() {
           <div className="space-y-6">
             <h1 className="text-3xl font-extrabold">Sua pegada de carbono 🌎</h1>
             <CarbonResult total={carbon.mine.total} breakdown={carbon.mine.breakdown} classK={carbon.classK} classSum={carbon.classSum} />
+            <Feedback text={data.feedback} onRetry={onRegen} busy={busy} />
             <Button size="lg" className="rounded-full" onClick={() => setView("home")}>Voltar ao início</Button>
           </div>
         )}

@@ -11,6 +11,11 @@ export function Feedback({ text, onRetry, busy }: { text: string | null; onRetry
       {text ? (
         <div className="space-y-3 leading-relaxed [&_h2]:mt-5 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_li]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ul]:list-disc [&_strong]:text-primary">
           <ReactMarkdown>{text}</ReactMarkdown>
+          {onRetry && (
+            <button onClick={onRetry} disabled={busy} className="text-sm font-semibold text-muted-foreground underline disabled:opacity-50">
+              {busy ? "Gerando..." : "Gerar de novo"}
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
