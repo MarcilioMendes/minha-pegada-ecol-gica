@@ -140,7 +140,7 @@ export const teacherOverview = createServerFn({ method: "POST" })
     const { data: responses } = await sb.from("responses").select("*");
     return {
       students: (students ?? []).map((s) => ({ id: s.id, pseudonym: s.pseudonym, class_name: s.class_name, hasPin: !!s.pin_hash, seedPerception: (s.seed_perception as { items?: string[] } | null)?.items ?? null })),
-      responses: (responses ?? []).map((r) => ({ ...r, planets: Number(r.planets) })),
+      responses: (responses ?? []).map((r) => ({ id: r.id, student_id: r.student_id, phase: r.phase, perception: r.perception as { items?: string[] }, feedback: currentFeedback(r) })),
     };
   });
 
