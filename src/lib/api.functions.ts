@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { computeFootprint, QUESTIONS, PERCEPTION_QUESTIONS, CATEGORY_LABEL, type Breakdown } from "./footprint";
+import { computeFootprint, QUESTIONS, PERCEPTION_QUESTIONS, CATEGORY_LABEL, computeEcological, aggregateClass, type Breakdown } from "./footprint";
 import { computeCarbon, CARBON_QUESTIONS, type CarbonBreakdown } from "./carbon";
 
 const db = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
@@ -168,9 +168,8 @@ export const teacherResetPin = createServerFn({ method: "POST" })
 
 // ---------- Calculadora de carbono (3º questionário) ----------
 async function classCarbon(sb: Awaited<ReturnType<typeof db>>) {
-  const { data } = await sb.from("carbon_responses").select("total_kg,breakdown");
-  const rows = (data ?? []).map((r) => ({ total: Number(r.total_kg), breakdown: r.breakdown as CarbonBreakdown }));
-  return { k: rows.length, sum: rows.reduce((s, r) => s + r.total, 0), rows };
+  const { data } = await sb.from("carbon_responses").select("total_kg,breakdown,answers");
+  return aggregateClass((data ?? []).map((r) => ({ total: Number(r.total_kg), breakdown: r.breakdown as CarbonBreakdown, answers: r.answers as Record<string, number> })));
 }
 
 export const getMyCarbon = createServerFn({ method: "POST" })
@@ -181,8 +180,8 @@ export const getMyCarbon = createServerFn({ method: "POST" })
     const { data: mine } = await sb.from("carbon_responses").select("*").eq("student_id", c.sid).maybeSingle();
     const cls = await classCarbon(sb);
     return {
-      mine: mine ? { answers: mine.answers as Record<string, number>, total: Number(mine.total_kg), breakdown: mine.breakdown as CarbonBreakdown } : null,
-      classK: cls.k, classSum: cls.sum,
+      mine: mine ? { answers: mine.answers as Record<string, number>, total: Number(mine.total_kg), breakdown: mine.breakdown as CarbonBreakdown, eco: computeEcological(mine.answers as Record<string, number>) } : null,
+      classK: cls.k, classSum: cls.sum, cls,
     };
   });
 
@@ -207,5 +206,5 @@ export const teacherCarbon = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await (await sess()).requireTeacher(data.token);
     const { data: rows } = await (await db()).from("carbon_responses").select("student_id,total_kg,breakdown,answers");
-    return (rows ?? []).map((r) => ({ student_id: r.student_id, total: Number(r.total_kg), breakdown: r.breakdown as CarbonBreakdown, answers: r.answers as Record<string, number> }));
+    return (rows ?? []).map((r) => ({ student_id: r.student_id, total: Number(r.total_kg), breakdown: r.breakdown as CarbonBreakdown, answers: r.answers as Record<string, number>, eco: computeEcological(r.answers as Record<string, number>) }));
   });

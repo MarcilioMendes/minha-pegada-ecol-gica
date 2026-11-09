@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { computeFootprint, computeEcological, GHA_PER_T_CO2, BASE_GHA, QUESTIONS } from "./footprint";
-import { CARBON_QUESTIONS } from "./carbon";
+import { computeFootprint, computeEcological, aggregateClass, GHA_PER_T_CO2, BASE_GHA, QUESTIONS } from "./footprint";
+import { CARBON_QUESTIONS, computeCarbon, topKey } from "./carbon";
 
 const all = (v: number) => Object.fromEntries(QUESTIONS.map((q) => [q.id, v]));
 
@@ -41,4 +41,28 @@ describe("computeEcological", () => {
   it("mais carne de boi aumenta a pastagem", () => {
     expect(computeEcological({ ...ana, q1: 3 }).byArea.pastagem).toBeGreaterThan(computeEcological(ana).byArea.pastagem);
   });
+});
+
+describe("aggregateClass", () => {
+  const row = (a: Record<string, number>) => ({ ...computeCarbon(a), answers: a });
+  it("turma vazia dá zeros", () => {
+    const r = aggregateClass([]);
+    expect([r.k, r.sum, r.avg, r.avgGha, r.avgPlanets, r.avgStages.alimentacao, r.avgAreas.carbono]).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+  it("soma e tira a média de kg, etapas, gha, Terras e áreas", () => {
+    const a = allC(0), d = allC(3);
+    const r = aggregateClass([row(a), row(d)]);
+    const [ea, ed] = [computeEcological(a), computeEcological(d)];
+    expect(r.k).toBe(2);
+    expect(r.sum).toBeCloseTo(computeCarbon(a).total + computeCarbon(d).total, 5);
+    expect(r.avg).toBeCloseTo(r.sum / 2, 5);
+    expect(r.avgStages.aviacao).toBeCloseTo((computeCarbon(a).breakdown.aviacao + computeCarbon(d).breakdown.aviacao) / 2, 5);
+    expect(r.avgGha).toBeCloseTo((ea.gha + ed.gha) / 2, 5);
+    expect(r.avgPlanets).toBeCloseTo((ea.planets + ed.planets) / 2, 5);
+    expect(r.avgAreas.pastagem).toBeCloseTo((ea.byArea.pastagem + ed.byArea.pastagem) / 2, 5);
+  });
+});
+
+describe("topKey", () => {
+  it("devolve a chave de maior valor", () => expect(topKey({ a: 1, b: 3, c: 2 })).toBe("b"));
 });

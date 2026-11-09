@@ -1,4 +1,4 @@
-import { computeCarbon, FOOD_TABLES, type Stage } from "./carbon";
+import { computeCarbon, FOOD_TABLES, STAGE_LABEL, type CarbonBreakdown, type Stage } from "./carbon";
 // Cálculo determinístico da Pegada Ecológica (modelo didático simplificado).
 export type Category = "alimentacao" | "transporte" | "energia" | "consumo";
 
@@ -159,4 +159,26 @@ export function computeEcological(a: Record<string, number>): EcoResult {
   const gha = Object.values(byAreaRaw).reduce((s, v) => s + v, 0);
   const round = <K extends string>(o: Record<K, number>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, r2(v as number)])) as Record<K, number>;
   return { gha: r2(gha), planets: r2(gha / BIOCAP_MUNDIAL), byArea: round(byAreaRaw), byStage: round(byStageRaw) };
+}
+
+export type ClassRow = { total: number; breakdown: CarbonBreakdown; answers: Record<string, number> };
+export type ClassAggregate = {
+  k: number;
+  sum: number;
+  avg: number;
+  avgStages: CarbonBreakdown;
+  avgGha: number;
+  avgPlanets: number;
+  avgAreas: Record<Area, number>;
+};
+
+/** Agregado da turma: só somas e médias, nunca o resultado individual de um colega. */
+export function aggregateClass(rows: ClassRow[]): ClassAggregate {
+  const k = rows.length;
+  const ecos = rows.map((r) => computeEcological(r.answers));
+  const mean = (v: number[]) => (k ? v.reduce((s, x) => s + x, 0) / k : 0);
+  const sum = rows.reduce((s, r) => s + r.total, 0);
+  const avgStages = Object.fromEntries((Object.keys(STAGE_LABEL) as Stage[]).map((s) => [s, mean(rows.map((r) => r.breakdown[s]))])) as CarbonBreakdown;
+  const avgAreas = Object.fromEntries((Object.keys(AREA_LABEL) as Area[]).map((a) => [a, mean(ecos.map((e) => e.byArea[a]))])) as Record<Area, number>;
+  return { k, sum, avg: mean(rows.map((r) => r.total)), avgStages, avgGha: mean(ecos.map((e) => e.gha)), avgPlanets: mean(ecos.map((e) => e.planets)), avgAreas };
 }
