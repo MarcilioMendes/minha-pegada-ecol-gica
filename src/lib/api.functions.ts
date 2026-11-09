@@ -25,6 +25,9 @@ export const studentLogin = createServerFn({ method: "POST" })
     return { token, pseudonym, firstAccess };
   });
 
+// Só a reflexão sai para a tela: as colunas antigas (answers, planets, breakdown) não são mais lidas.
+const perceptionOf = (r: { perception: unknown } | undefined) => (r ? { perception: r.perception as { items?: string[] } } : null);
+
 export const getMyData = createServerFn({ method: "POST" })
   .inputValidator((d: { token: string }) => d)
   .handler(async ({ data }) => {
@@ -36,8 +39,8 @@ export const getMyData = createServerFn({ method: "POST" })
     return {
       pseudonym: c.p,
       seedPerception: seed,
-      pre: rows?.find((r) => r.phase === "pre") ?? null,
-      post: rows?.find((r) => r.phase === "post") ?? null,
+      pre: perceptionOf(rows?.find((r) => r.phase === "pre")),
+      post: perceptionOf(rows?.find((r) => r.phase === "post")),
     };
   });
 
@@ -79,31 +82,24 @@ Máximo de ~250 palavras.`;
 }
 
 export const submitPhase = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; phase: "pre" | "post"; perception: string[]; answers: Record<string, number> }) => d)
+  .inputValidator((d: { token: string; phase: "pre" | "post"; perception: string[] }) => d)
   .handler(async ({ data }) => {
     const c = await (await sess()).requireStudent(data.token);
     if (data.phase !== "pre" && data.phase !== "post") throw new Error("Fase inválida");
-    for (const q of QUESTIONS) {
-      const v = data.answers[q.id];
-      if (typeof v !== "number" || v < 0 || v > 3) throw new Error("Responda todas as perguntas.");
-    }
     const perception = PERCEPTION_QUESTIONS.map((_, i) => String(data.perception[i] ?? "").slice(0, 2000));
-    const { planets, breakdown } = computeFootprint(data.answers);
     const sb = await db();
-    let previous: { planets: number; perception: string[] } | undefined;
     if (data.phase === "post") {
-      const { data: pre } = await sb.from("responses").select("*").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
-      if (!pre) throw new Error("Faça primeiro o diagnóstico inicial.");
-      previous = { planets: Number(pre.planets), perception: (pre.perception as { items?: string[] }).items ?? [] };
+      const { data: pre } = await sb.from("responses").select("id").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
+      if (!pre) throw new Error("Faça primeiro a Percepção Ambiental.");
     }
-    const feedback = await aiFeedback(data.phase, perception, data.answers, planets, breakdown, previous);
+    // A reflexão mudou: o feedback antigo fica desatualizado e os hábitos antigos deixam de valer.
     const row = {
-      student_id: c.sid, phase: data.phase, perception: { items: perception }, answers: data.answers,
-      planets, breakdown, ai_feedback: feedback, updated_at: new Date().toISOString(),
+      student_id: c.sid, phase: data.phase, perception: { items: perception }, answers: {},
+      planets: 0, breakdown: {}, ai_feedback: null, updated_at: new Date().toISOString(),
     };
     const { error } = await sb.from("responses").upsert(row, { onConflict: "student_id,phase" });
     if (error) throw new Error("Não foi possível salvar. Tente de novo.");
-    return { planets, breakdown, ai_feedback: feedback };
+    return { ok: true };
   });
 
 export const regenerateFeedback = createServerFn({ method: "POST" })
