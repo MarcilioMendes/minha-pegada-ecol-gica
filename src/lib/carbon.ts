@@ -55,6 +55,9 @@ const Q16: V4 = [15, 24, 40, 80];
 const Q17: V4 = [0, 30, 80, 150];
 const Q18: V4 = [90, 170, 220, 250];
 
+/** Tabelas de alimentação (kg CO₂e/ano por alternativa), reaproveitadas pela pegada ecológica. */
+export const FOOD_TABLES = { base: 400, q1: Q1, q2: Q2, q3: Q3, q4: Q4, q6: M6 } as const;
+
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
 export function computeCarbon(a: Record<string, number>): { total: number; breakdown: CarbonBreakdown } {
