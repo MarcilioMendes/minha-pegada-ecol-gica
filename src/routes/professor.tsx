@@ -11,6 +11,7 @@ import { AREA_LABEL, PERCEPTION_QUESTIONS, aggregateClass, type Area } from "@/l
 import { Planets, FootprintDonut, AREA_COLOR } from "@/components/eco/FootprintChart";
 import { formatKg, STAGE_LABEL, CARBON_QUESTIONS, CELEBS, topKey, type Stage } from "@/lib/carbon";
 import { Feedback } from "@/components/eco/Feedback";
+import { csvCell } from "@/lib/csv";
 import { Download, LogOut, UserPlus, Check, Minus } from "lucide-react";
 
 export const Route = createFileRoute("/professor")({
@@ -63,9 +64,8 @@ function Professor() {
     const stages = Object.keys(STAGE_LABEL) as Stage[];
     const areas = Object.keys(AREA_LABEL) as Area[];
     const head = ["pseudonimo", "turma", ...PERCEPTION_QUESTIONS.map((_, i) => `percepcao_${i + 1}`), "co2_total_kg", ...stages.map((k) => STAGE_LABEL[k]), "gha", "terras", ...areas.map((k) => AREA_LABEL[k]), ...CARBON_QUESTIONS.map((q) => q.id.toUpperCase()), "feedback_ia"];
-    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const num = (v: number | undefined) => (v === undefined ? "" : String(v).replace(".", ","));
-    const lines = [head.map(esc).join(";")];
+    const lines = [head.map(csvCell).join(";")];
     data.students.forEach((s) => {
       const pre = data.responses.find((r) => r.student_id === s.id && r.phase === "pre");
       const c = carbon.find((x) => x.student_id === s.id);
@@ -74,7 +74,7 @@ function Professor() {
         num(c?.total), ...stages.map((k) => num(c?.breakdown[k])),
         num(c?.eco.gha), num(c?.eco.planets), ...areas.map((k) => num(c?.eco.byArea[k])),
         ...CARBON_QUESTIONS.map((q) => (c ? q.options[c.answers[q.id] ?? -1] : "")),
-        pre?.feedback].map(esc).join(";"));
+        pre?.feedback].map(csvCell).join(";"));
     });
     const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);

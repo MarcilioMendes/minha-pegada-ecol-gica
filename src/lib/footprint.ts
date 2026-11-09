@@ -110,6 +110,11 @@ export type ClassAggregate = {
   avgAreas: Record<Area, number>;
 };
 
+// Com 1 ou 2 respostas, as médias revelariam o resultado de um colega (2 × média − o próprio).
+export const MIN_CLASS_K = 3;
+/** O que o aluno pode ver da turma: abaixo do mínimo de respostas, volta o agregado vazio. */
+export const shareableClass = (c: ClassAggregate): ClassAggregate => (c.k >= MIN_CLASS_K ? c : aggregateClass([]));
+
 /** Agregado da turma: só somas e médias, nunca o resultado individual de um colega. */
 export function aggregateClass(rows: ClassRow[]): ClassAggregate {
   const k = rows.length;

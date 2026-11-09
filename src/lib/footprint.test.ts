@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeEcological, aggregateClass, GHA_PER_T_CO2, BASE_GHA } from "./footprint";
+import { computeEcological, aggregateClass, shareableClass, GHA_PER_T_CO2, BASE_GHA } from "./footprint";
 import { CARBON_QUESTIONS, computeCarbon, topKey } from "./carbon";
 
 // Exemplo resolvido da "Ana" (mesmo de carbon.test.ts).
@@ -49,6 +49,17 @@ describe("aggregateClass", () => {
     expect(r.avgGha).toBeCloseTo((ea.gha + ed.gha) / 2, 5);
     expect(r.avgPlanets).toBeCloseTo((ea.planets + ed.planets) / 2, 5);
     expect(r.avgAreas.pastagem).toBeCloseTo((ea.byArea.pastagem + ed.byArea.pastagem) / 2, 5);
+  });
+});
+
+describe("shareableClass", () => {
+  const row = { ...computeCarbon(ana), answers: ana };
+  it("esconde a turma com 1 ou 2 respostas", () => {
+    expect(shareableClass(aggregateClass([row, row]))).toEqual(aggregateClass([]));
+  });
+  it("mostra a turma a partir de 3 respostas", () => {
+    const c = aggregateClass([row, row, row]);
+    expect(shareableClass(c)).toBe(c);
   });
 });
 

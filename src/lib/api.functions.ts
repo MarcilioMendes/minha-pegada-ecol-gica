@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { PERCEPTION_QUESTIONS, AREA_LABEL, computeEcological, aggregateClass, type EcoResult } from "./footprint";
+import { PERCEPTION_QUESTIONS, AREA_LABEL, computeEcological, aggregateClass, shareableClass, type EcoResult } from "./footprint";
 import { computeCarbon, CARBON_QUESTIONS, STAGE_LABEL, topKey, type CarbonBreakdown } from "./carbon";
 
 const db = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
@@ -95,10 +95,12 @@ export const submitPhase = createServerFn({ method: "POST" })
       const { data: pre } = await sb.from("responses").select("id").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
       if (!pre) throw new Error("Faça primeiro a Percepção Ambiental.");
     }
-    // A reflexão mudou: o feedback antigo fica desatualizado e os hábitos antigos deixam de valer.
+    const { data: cur } = await sb.from("responses").select("perception,answers,ai_feedback").eq("student_id", c.sid).eq("phase", data.phase).maybeSingle();
+    const unchanged = !!cur && JSON.stringify(perceptionItems(cur.perception)) === JSON.stringify(perception);
+    // Se a reflexão mudou, o feedback fica desatualizado. Os hábitos antigos deixam de valer de qualquer forma.
     const row = {
       student_id: c.sid, phase: data.phase, perception: { items: perception }, answers: {},
-      planets: 0, breakdown: {}, ai_feedback: null, updated_at: new Date().toISOString(),
+      planets: 0, breakdown: {}, ai_feedback: unchanged ? currentFeedback(cur) : null, updated_at: new Date().toISOString(),
     };
     const { error } = await sb.from("responses").upsert(row, { onConflict: "student_id,phase" });
     if (error) throw new Error("Não foi possível salvar. Tente de novo.");
@@ -116,7 +118,8 @@ export const regenerateFeedback = createServerFn({ method: "POST" })
     const answers = carbon.answers as Record<string, number>;
     const fb = await aiFeedback(perceptionItems(pre.perception), answers, Number(carbon.total_kg), carbon.breakdown as CarbonBreakdown, computeEcological(answers));
     if (!fb) throw new Error("A IA não respondeu agora. Tente em instantes.");
-    await sb.from("responses").update({ ai_feedback: fb, answers: {} }).eq("id", pre.id);
+    const { error } = await sb.from("responses").update({ ai_feedback: fb, answers: {} }).eq("id", pre.id);
+    if (error) throw new Error("Não foi possível salvar o feedback. Tente de novo.");
     return { ai_feedback: fb };
   });
 
@@ -178,7 +181,7 @@ export const getMyCarbon = createServerFn({ method: "POST" })
     const cls = await classCarbon(sb);
     return {
       mine: mine ? { answers: mine.answers as Record<string, number>, total: Number(mine.total_kg), breakdown: mine.breakdown as CarbonBreakdown, eco: computeEcological(mine.answers as Record<string, number>) } : null,
-      cls,
+      cls: shareableClass(cls),
     };
   });
 
@@ -198,9 +201,15 @@ export const submitCarbon = createServerFn({ method: "POST" })
     const { error } = await sb.from("carbon_responses").upsert(
       { student_id: c.sid, answers, total_kg: total, breakdown, updated_at: new Date().toISOString() }, { onConflict: "student_id" });
     if (error) throw new Error("Não foi possível salvar. Tente de novo.");
+    // As respostas mudaram: limpa o feedback antes da IA, para ele não sobrar se a chamada falhar ou for interrompida.
+    const { error: clearError } = await sb.from("responses").update({ ai_feedback: null, answers: {} }).eq("id", pre.id);
+    if (clearError) throw new Error("Não foi possível salvar. Tente de novo.");
     const eco = computeEcological(answers);
     const ai_feedback = await aiFeedback(perceptionItems(pre.perception), answers, total, breakdown, eco);
-    await sb.from("responses").update({ ai_feedback, answers: {} }).eq("id", pre.id);
+    if (ai_feedback) {
+      const { error: saveError } = await sb.from("responses").update({ ai_feedback }).eq("id", pre.id);
+      if (saveError) console.error("AI feedback save error", saveError);
+    }
     return { total, breakdown, eco, ai_feedback };
   });
 
