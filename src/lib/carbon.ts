@@ -92,19 +92,6 @@ export function timeEquivalent(celebKg: number, yearlyKg: number): string {
   return `${(years * 365).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} dias`;
 }
 
-export type Celebrity = { name: string; kg: number; what: string; period: string; trip?: boolean };
-export const CELEBRITIES: Celebrity[] = [
-  { name: "Donald Trump", kg: 35_380_000, what: "Voos de jato particular", period: "Período não informado (lista 2025–2026)" },
-  { name: "Taylor Swift", kg: 8_293_540, what: "170 voos do jato dela", period: "1º jan – 19 jul 2022 (≈ 200 dias)" },
-  { name: "Travis Scott", kg: 6_061_300, what: "137 voos", period: "jan – nov 2023" },
-  { name: "Kim Kardashian", kg: 5_857_600, what: "165 voos", period: "jan – nov 2023" },
-  { name: "Elon Musk", kg: 4_564_700, what: "150 voos", period: "jan – nov 2023" },
-  { name: "Neymar — Boeing 747 sozinho", kg: 230_000, what: "1 viagem à Arábia Saudita", period: "uma viagem (2023)", trip: true },
-  { name: "Alok", kg: 29_300, what: "36 voos, 172.695 km", period: "2023" },
-  { name: "Virginia Fonseca", kg: 6_249.6, what: "Bate-volta de jatinho (2 h 40 min)", period: "uma viagem", trip: true },
-  { name: "Neymar — helicóptero", kg: 620, what: "Trecho Mangaratiba → Santos", period: "uma viagem (2025)", trip: true },
-];
-
 // SEEG 2025, por habitante (kg CO2e/ano).
 export const BRASIL = { agro: 2935, usoTerra: 3816, energia: 2000, residuos: 449, industria: 442, bruto: 9642, remocoes: 3056 };
 export const CLASS_SIZE = 30;
@@ -197,4 +184,98 @@ export const durationText = (days: number) => { const d = duration(days); return
 export function carEquivalent(kg: number): { km: number; laps: number } {
   const km = kg / 0.13;
   return { km: Math.round(km / 100) * 100, laps: km / 40075 };
+}
+
+// ---------- Comparação "Eu × famosos" ----------
+export type Perspective = "eu" | "como" | "turma";
+export type CelebPeriod = "total" | 1 | 30.42 | 365;
+export const PERIOD_LABEL: Record<Exclude<CelebPeriod, "total">, string> = { 1: "1 dia", 30.42: "1 mês", 365: "1 ano" };
+
+export type Who = { perYear: number; aviacao: number; quem: string; quemObj: string; seu: string; calc: string };
+
+/** Quem está sendo comparado: a pessoa, a turma imaginária ou a turma real (só totais). */
+export function whoCompares(p: Perspective, total: number, aviacao: number, cls: { k: number; sum: number; aviacaoAvg: number }): Who {
+  if (p === "eu") return { perYear: total, aviacao, quem: "Você", quemObj: "você", seu: "o seu dia", calc: `${nf(total, 0)} kg/ano ÷ 365` };
+  if (p === "como") return { perYear: CLASS_SIZE * total, aviacao: CLASS_SIZE * aviacao, quem: `Uma turma de ${CLASS_SIZE} alunos iguais a você`, quemObj: "essa turma", seu: "um dia dessa turma", calc: `${CLASS_SIZE} × ${nf(total, 0)} kg/ano ÷ 365` };
+  return { perYear: cls.sum, aviacao: cls.k * cls.aviacaoAvg, quem: `A turma real (${cls.k} ${cls.k === 1 ? "resposta" : "respostas"})`, quemObj: "a turma", seu: "um dia da turma", calc: `${nf(cls.sum, 0)} kg/ano ÷ 365` };
+}
+
+export type CelebCard = { q: string; a: string; calc: string };
+export type CelebComparison =
+  | { kind: "empty"; message: string; notes: string[] }
+  | { kind: "ok"; before: string; highlight: string; after: string; cards: CelebCard[]; notes: string[] };
+
+const days = (d: number) => nf(d, d % 1 ? 2 : 0);
+
+/** Monta a frase de destaque e os cartões de tempo do painel "Eu × famosos". */
+export function compareCeleb(nome: string, ev: CelebEvent, period: CelebPeriod, freq: number | undefined, who: Who, grupo: Perspective): CelebComparison {
+  const per = ev.unico ? "total" : period;
+  const rate = celebRate(ev, freq);
+  const f = freq ?? ev.freq ?? 0;
+  const notes: string[] = [];
+  if (ev.unico) notes.push("Viagem única: só dá para comparar a viagem inteira.");
+  if (ev.supoe) notes.push(ev.supoe);
+  if (ev.dias && per !== "total") notes.push(`Média: ${nf(ev.E, 0)} kg ÷ ${ev.dias} dias = ${nf(ev.E / ev.dias, 0)} kg por dia, contando dias sem voo.`);
+  if (ev.freq != null && per !== "total" && rate === null) notes.push("Com 0 viagens por mês não há emissão no período.");
+
+  const perDay = who.perYear / 365;
+  let emitted: number, perText: string, perCalc: string;
+  if (per === "total") {
+    emitted = ev.E;
+    perText = ev.dias ? "em voos de jatinho no período registrado" : `em ${ev.desc.replace(/^1 /, "um ")}`;
+    perCalc = `${nf(ev.E, 0)} kg registrados`;
+  } else {
+    emitted = rate ? rate * per : 0;
+    perText = `em ${PERIOD_LABEL[per]}`;
+    perCalc = ev.dias ? `${nf(rate ?? 0, 0)} kg/dia × ${days(per)} dias` : `${nf(ev.E, 1)} kg × ${nf(f, 0)} ${ev.unidade}/mês × 12 ÷ 365 × ${days(per)} dias`;
+  }
+  if (emitted <= 0) return { kind: "empty", message: `Com essa frequência, ${nome} não emite nada nesse período.`, notes };
+  if (perDay <= 0) return { kind: "empty", message: "Ainda não há respostas para comparar.", notes };
+
+  const time = emitted / perDay;
+  const alvo = per === "total" ? (ev.dias ? `tudo o que ${nome} emitiu no período` : "essa viagem inteira") : `o que ${nome} emite em ${PERIOD_LABEL[per]}`;
+  const cards: CelebCard[] = [{ q: `Quanto tempo ${who.quemObj} leva para emitir ${alvo}?`, a: durationText(time), calc: `${perCalc} ÷ (${who.calc})` }];
+  if (per !== "total") {
+    const mine = perDay * per;
+    cards.push({ q: `Em ${PERIOD_LABEL[per]}, quanto ${who.quemObj} emite?`, a: formatKg(mine), calc: `${nf(perDay, 1)} kg/dia × ${days(per)} dias` });
+    cards.push({ q: `Em ${PERIOD_LABEL[per]}, ${nome} emite quantas vezes mais?`, a: `${nf(emitted / mine, emitted / mine < 10 ? 1 : 0)} vezes`, calc: `${formatKg(emitted)} ÷ ${formatKg(mine)}` });
+  }
+  if (rate) cards.push({ q: `Em quanto tempo ${nome} emite ${who.seu}?`, a: durationText(perDay / rate), calc: `${nf(perDay, 1)} ÷ ${nf(rate, 0)} kg/dia${ev.dias ? "" : " (média com a frequência suposta)"}` });
+  if (ev.horas) {
+    const perHour = ev.E / ev.horas;
+    cards.push({ q: `Quanto tempo ${who.quemObj} leva para emitir 1 hora de voo de ${nome}?`, a: durationText(perHour / perDay), calc: `${nf(perHour, 0)} kg por hora de voo ÷ ${nf(perDay, 1)} kg/dia` });
+    cards.push({ q: `Em quanto tempo de voo ${nome} emite ${who.seu}?`, a: durationText(perDay / perHour / 24), calc: `${nf(perDay, 1)} kg ÷ ${nf(perHour, 0)} kg/h` });
+  }
+  if (who.aviacao > 0) cards.push({ q: `Só voos com voos: quantos anos de voos ${grupo === "eu" ? "seus" : "desse grupo"} cabem nisso?`, a: `${nf(emitted / who.aviacao, emitted / who.aviacao < 10 ? 1 : 0)} anos`, calc: `${formatKg(emitted)} ÷ ${nf(who.aviacao, 0)} kg/ano de aviação` });
+  else cards.push({ q: "Só voos com voos", a: "0 kg de avião", calc: grupo === "eu" ? "Você não voou nos últimos 12 meses. Essa é a comparação de mesmo recorte (ISO 14067, Anexo B)." : "Ninguém voou nesse grupo." });
+
+  return { kind: "ok", before: `${who.quem} levaria `, highlight: durationText(time), after: ` para emitir o que ${nome} emite ${perText}.`, cards, notes };
+}
+
+// ---------- "Mostrar as contas" ----------
+/** kg (ou multiplicador) de cada alternativa, para as perguntas que têm um valor direto. */
+export const ALTERNATIVES: Record<string, { values: readonly number[]; prefix?: string; suffix: string }> = {
+  q1: { values: Q1, suffix: " kg/ano" }, q2: { values: Q2, suffix: " kg/ano" }, q3: { values: Q3, suffix: " kg/ano" }, q4: { values: Q4, suffix: " kg/ano" },
+  q6: { values: M6, prefix: "× ", suffix: " na alimentação" },
+  q8: { values: Q8, suffix: " kg/ano ÷ moradores" }, q9: { values: Q9, suffix: " kg/ano" },
+  q11: { values: Q11, suffix: " kg/ano ÷ moradores" }, q12: { values: Q12, suffix: " kg/ano ÷ moradores" },
+  q13: { values: M13.map((m) => 1800 * 0.0385 * m), suffix: " kg/ano ÷ moradores" },
+  q14: { values: Q14, suffix: " kg/ano" }, q15: { values: N15.map((x) => 12 * x), suffix: " kg/ano" },
+  q16: { values: Q16, suffix: " kg/ano" }, q17: { values: Q17, suffix: " kg/ano" }, q18: { values: Q18, suffix: " kg/ano" },
+};
+
+/** A conta de cada etapa, com os valores das respostas. */
+export function explainCarbon(a: Record<string, number>): { stage: Stage; formula: string }[] {
+  const g = (id: string, t: V4): number => t[a[id] ?? 0] ?? t[0];
+  const n = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+  const { breakdown: b } = computeCarbon(a);
+  const moradores = n(g("q0", N));
+  return [
+    { stage: "alimentacao", formula: `(400 + ${n(g("q1", Q1))} + ${n(g("q2", Q2))} + ${n(g("q3", Q3))} + ${n(g("q4", Q4))}) × ${n(g("q6", M6))} = ${nf(b.alimentacao, 1)} kg` },
+    { stage: "transporte", formula: `2 × ${n(g("q7b", D7B))} km × 200 dias × ${n(g("q7", F7))} kg/km + ${n(g("q8", Q8))} ÷ ${moradores} moradores = ${nf(b.transporte, 1)} kg` },
+    { stage: "aviacao", formula: `${n(g("q9", Q9))} kg` },
+    { stage: "energia", formula: `${n(g("q10", T10))} × ${n(g("q10b", F10B))} (banho) + (${n(g("q11", Q11))} + ${n(g("q12", Q12))} + 1.800 × 0,0385 × ${n(g("q13", M13))}) ÷ ${moradores} moradores + ${n(g("q14", Q14))} (telas) = ${nf(b.energia, 1)} kg` },
+    { stage: "consumo", formula: `12 × ${n(g("q15", N15))} + ${n(g("q16", Q16))} + ${n(g("q17", Q17))} = ${nf(b.consumo, 1)} kg` },
+    { stage: "residuos", formula: `${n(g("q18", Q18))} kg` },
+  ];
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeCarbon, timeEquivalent, BRASIL, SEEG, CELEBS, celebRate, duration, durationText, carEquivalent } from "./carbon";
+import { computeCarbon, timeEquivalent, BRASIL, SEEG, CELEBS, celebRate, duration, durationText, carEquivalent, whoCompares, compareCeleb, explainCarbon } from "./carbon";
 
 // Exemplo resolvido da "Ana" no documento norteador.
 const ana: Record<string, number> = {
@@ -48,4 +48,50 @@ describe("SEEG", () => {
 
 describe("carEquivalent", () => {
   it("Ana ≈ 20.200 km de carro", () => expect(carEquivalent(2623.4).km).toBe(20200));
+});
+
+describe("compareCeleb", () => {
+  const cls = { k: 2, sum: 5000, aviacaoAvg: 150 };
+  const eu = whoCompares("eu", 2623.4, 0, cls);
+  it("Virginia, bate-volta, Eu, registrado: mesmo tempo do modelo", () => {
+    const r = compareCeleb("Virginia Fonseca", ev("virginia", "bv"), "total", undefined, eu, "eu");
+    expect(r.kind).toBe("ok");
+    if (r.kind === "ok") {
+      expect(r.highlight).toBe("2,4 anos");
+      expect(r.before).toBe("Você levaria ");
+      expect(r.after).toContain("em um bate-volta de jatinho");
+    }
+  });
+  it("Taylor Swift em 1 dia: 16 anos", () => {
+    const r = compareCeleb("Taylor Swift", ev("taylor", "y"), 1, undefined, eu, "eu");
+    expect(r.kind === "ok" && r.highlight).toBe("16 anos");
+    expect(r.notes.join(" ")).toContain("41.468 kg por dia");
+  });
+  it("viagem única ignora o período escolhido", () => {
+    const r = compareCeleb("Neymar", ev("neymar", "b747"), 365, undefined, eu, "eu");
+    expect(r.kind === "ok" && r.after).toContain("Boeing 747");
+    expect(r.notes[0]).toContain("Viagem única");
+  });
+  it("frequência 0 num período não tem emissão", () => {
+    const r = compareCeleb("Neymar", ev("neymar", "heli"), 30.42, 0, eu, "eu");
+    expect(r.kind).toBe("empty");
+  });
+  it("quem não voou recebe o cartão de 0 kg de avião", () => {
+    const r = compareCeleb("Taylor Swift", ev("taylor", "y"), "total", undefined, eu, "eu");
+    expect(r.kind === "ok" && r.cards.at(-1)!.a).toBe("0 kg de avião");
+  });
+  it("turma real usa a soma e a aviação total", () => {
+    const t = whoCompares("turma", 2623.4, 0, cls);
+    expect(t.perYear).toBe(5000);
+    expect(t.aviacao).toBe(300);
+  });
+  it("turma imaginária multiplica por 30", () => {
+    expect(whoCompares("como", 1000, 10, cls).perYear).toBe(30000);
+  });
+});
+
+describe("explainCarbon", () => {
+  it("mostra a conta da alimentação da Ana", () => {
+    expect(explainCarbon(ana)[0]).toEqual({ stage: "alimentacao", formula: "(400 + 1.294 + 130 + 135 + 60) × 1,05 = 2.120,0 kg" });
+  });
 });

@@ -122,8 +122,8 @@ function Aluno() {
         {view === "result-carbon" && carbon?.mine && (
           <div className="space-y-6">
             <h1 className="text-3xl font-extrabold">Seu resultado 🌎</h1>
-            <CarbonResult total={carbon.mine.total} breakdown={carbon.mine.breakdown} eco={carbon.mine.eco} cls={carbon.cls} />
-            <Feedback text={data.feedback} onRetry={onRegen} busy={busy} />
+            <CarbonResult answers={carbon.mine.answers} total={carbon.mine.total} breakdown={carbon.mine.breakdown} eco={carbon.mine.eco} cls={carbon.cls}
+              feedback={<Feedback text={data.feedback} onRetry={onRegen} busy={busy} />} />
             <Button size="lg" className="rounded-full" onClick={() => setView("home")}>Voltar ao início</Button>
           </div>
         )}

@@ -2,15 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import {
-  CARBON_QUESTIONS, STAGE_LABEL, CELEBRITIES, CLASS_SIZE, formatKg, timeEquivalent,
-  type CarbonBreakdown,
-} from "@/lib/carbon";
+import { CARBON_QUESTIONS, STAGE_LABEL, type CarbonBreakdown } from "@/lib/carbon";
 import type { ClassAggregate, EcoResult } from "@/lib/footprint";
 import { ScorePanel } from "@/components/eco/result/ScorePanel";
 import { EcoPanel } from "@/components/eco/result/EcoPanel";
 import { ClassPanel } from "@/components/eco/result/ClassPanel";
 import { BrasilPanel } from "@/components/eco/result/BrasilPanel";
+import { CelebPanel } from "@/components/eco/result/CelebPanel";
+import { ContasPanel } from "@/components/eco/result/ContasPanel";
 
 export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<string, number> | undefined; busy: boolean; onSubmit: (a: Record<string, number>) => void }) {
   const [step, setStep] = useState(0);
@@ -56,49 +55,17 @@ export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<strin
   );
 }
 
-export function CarbonResult({ total, breakdown, eco, cls }: { total: number; breakdown: CarbonBreakdown; eco: EcoResult; cls: ClassAggregate }) {
-  const [celeb, setCeleb] = useState(0);
-  const c = CELEBRITIES[celeb]!;
-  const b = breakdown;
+export function CarbonResult({ answers, total, breakdown, eco, cls, feedback }: { answers: Record<string, number>; total: number; breakdown: CarbonBreakdown; eco: EcoResult; cls: ClassAggregate; feedback: React.ReactNode }) {
+  const [showCalc, setShowCalc] = useState(false);
   return (
     <div className="space-y-6">
       <ScorePanel total={total} breakdown={breakdown} planets={eco.planets} />
       <EcoPanel eco={eco} />
       <ClassPanel total={total} breakdown={breakdown} planets={eco.planets} cls={cls} />
-
-      <div className="space-y-4 rounded-3xl bg-card p-6 shadow-soft">
-        <h2 className="text-xl font-bold">✈️ Comparar com uma celebridade</h2>
-        <div className="flex flex-wrap gap-2">
-          {CELEBRITIES.map((x, i) => (
-            <Button key={x.name} size="sm" variant={i === celeb ? "default" : "outline"} className="rounded-full" onClick={() => setCeleb(i)}>{x.name}</Button>
-          ))}
-        </div>
-        <div className="rounded-2xl bg-muted p-4 text-sm">
-          <p><b>{c.name}</b>: {formatKg(c.kg)} de CO₂ — {c.what}.</p>
-          <p className="text-muted-foreground">Período: {c.period}{c.trip ? " · valor de uma viagem, não de um ano" : ""}. Só voos.</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Compare label="Você levaria" value={timeEquivalent(c.kg, total)} sub="para emitir o mesmo, com tudo que você faz" />
-          <Compare label="Se a turma toda fosse como você" value={timeEquivalent(c.kg, total * CLASS_SIZE)} sub={`${CLASS_SIZE} alunos × ${formatKg(total)}`} />
-          <Compare label="A turma real levaria" value={cls.k ? timeEquivalent(c.kg, cls.sum) : "—"} sub={`${cls.k} resposta(s): ${formatKg(cls.sum)}/ano`} />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Comparação justa (mesmo recorte, só voos): sua aviação é {formatKg(b.aviacao)}/ano
-          {b.aviacao > 0 ? ` — levaria ${timeEquivalent(c.kg, b.aviacao)} para igualar.` : " — você não voou, então nunca chegaria lá."}
-        </p>
-      </div>
-
+      <CelebPanel total={total} breakdown={breakdown} cls={cls} showCalc={showCalc} />
       <BrasilPanel total={total} breakdown={breakdown} cls={cls} />
-    </div>
-  );
-}
-
-function Compare({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div className="rounded-2xl border-2 border-border p-4 text-center">
-      <p className="text-xs font-bold uppercase text-muted-foreground">{label}</p>
-      <p className="font-display text-2xl font-extrabold text-primary">{value}</p>
-      <p className="text-xs text-muted-foreground">{sub}</p>
+      {feedback}
+      <ContasPanel answers={answers} eco={eco} open={showCalc} onToggle={() => setShowCalc((v) => !v)} />
     </div>
   );
 }
