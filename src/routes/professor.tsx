@@ -7,17 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin, teacherCarbon } from "@/lib/api.functions";
-import { CATEGORY_LABEL, PERCEPTION_QUESTIONS, QUESTIONS, topCategory, type Breakdown, type Category } from "@/lib/footprint";
-import { Planets, FootprintDonut, CAT_COLOR } from "@/components/eco/FootprintChart";
-import { formatKg, STAGE_LABEL, CARBON_QUESTIONS, CELEBS, type Stage } from "@/lib/carbon";
+import { AREA_LABEL, PERCEPTION_QUESTIONS, aggregateClass, type Area } from "@/lib/footprint";
+import { Planets, FootprintDonut, AREA_COLOR } from "@/components/eco/FootprintChart";
+import { formatKg, STAGE_LABEL, CARBON_QUESTIONS, CELEBS, topKey, type Stage } from "@/lib/carbon";
 import { Feedback } from "@/components/eco/Feedback";
+import { csvCell } from "@/lib/csv";
 import { Download, LogOut, UserPlus, Check, Minus } from "lucide-react";
 
 export const Route = createFileRoute("/professor")({
   head: () => ({
     meta: [
       { title: "Painel do Professor · Pegada Ecológica" },
-      { name: "description", content: "Acompanhe a Turma 81: status Pré e Pós, métricas da turma e exportação CSV." },
+      { name: "description", content: "Acompanhe a Turma 81: percepção, calculadora, métricas da turma e exportação CSV." },
       { property: "og:title", content: "Painel do Professor · Pegada Ecológica" },
       { property: "og:description", content: "Painel de acompanhamento da turma na atividade de Pegada Ecológica." },
     ],
@@ -26,9 +27,7 @@ export const Route = createFileRoute("/professor")({
 });
 
 type Overview = Awaited<ReturnType<typeof teacherOverview>>;
-type R = Overview["responses"][number];
 const items = (p: unknown) => (p as { items?: string[] })?.items ?? [];
-const hasHabits = (r: R) => Object.keys((r.answers ?? {}) as object).length > 0;
 
 function Professor() {
   const loginFn = useServerFn(teacherLogin);
@@ -55,34 +54,27 @@ function Professor() {
 
   const stats = useMemo(() => {
     if (!data) return null;
-    const by = (ph: string) => data.responses.filter((r) => r.phase === ph);
-    const avg = (rs: R[]) => (rs.length ? rs.reduce((s, r) => s + r.planets, 0) / rs.length : 0);
-    const sumB = (rs: R[]) => {
-      const b: Breakdown = { alimentacao: 0, transporte: 0, energia: 0, consumo: 0 };
-      rs.forEach((r) => (Object.keys(b) as Category[]).forEach((k) => (b[k] += (r.breakdown as Breakdown)[k] / rs.length)));
-      return b;
-    };
-    const pre = by("pre"), post = by("post");
-    // Só as linhas antigas têm Terras e categorias; as novas guardam apenas a percepção.
-    const oldPre = pre.filter(hasHabits), oldPost = post.filter(hasHabits);
-    return { pre, post, oldPre, oldPost, avgPre: avg(oldPre), avgPost: avg(oldPost), bPre: sumB(oldPre), top: oldPre.length ? topCategory(sumB(oldPre)) : null };
-  }, [data]);
+    const pre = data.responses.filter((r) => r.phase === "pre");
+    const cls = aggregateClass(carbon);
+    return { pre, cls, top: cls.k ? topKey(cls.avgStages) : null };
+  }, [data, carbon]);
 
   function exportCsv() {
     if (!data) return;
-    const head = ["pseudonimo", "turma", "fase", "data", "planetas", ...Object.values(CATEGORY_LABEL), ...PERCEPTION_QUESTIONS.map((_, i) => `percepcao_${i + 1}`), ...QUESTIONS.map((q) => q.id.toUpperCase()), "feedback_ia"];
-    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const lines = [head.map(esc).join(";")];
+    const stages = Object.keys(STAGE_LABEL) as Stage[];
+    const areas = Object.keys(AREA_LABEL) as Area[];
+    const head = ["pseudonimo", "turma", ...PERCEPTION_QUESTIONS.map((_, i) => `percepcao_${i + 1}`), "co2_total_kg", ...stages.map((k) => STAGE_LABEL[k]), "gha", "terras", ...areas.map((k) => AREA_LABEL[k]), ...CARBON_QUESTIONS.map((q) => q.id.toUpperCase()), "feedback_ia"];
+    const num = (v: number | undefined) => (v === undefined ? "" : String(v).replace(".", ","));
+    const lines = [head.map(csvCell).join(";")];
     data.students.forEach((s) => {
-      data.responses.filter((r) => r.student_id === s.id).forEach((r) => {
-        const b = r.breakdown as Breakdown;
-        const a = r.answers as Record<string, number>;
-        lines.push([s.pseudonym, s.class_name, r.phase === "pre" ? "Pré" : "Pós", new Date(r.updated_at).toLocaleString("pt-BR"), String(r.planets).replace(".", ","),
-          ...(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => String(b[k] ?? "").replace(".", ",")),
-          ...PERCEPTION_QUESTIONS.map((_, i) => items(r.perception)[i]),
-          ...QUESTIONS.map((q) => q.options.find((o) => o.score === a[q.id])?.label),
-          r.ai_feedback].map(esc).join(";"));
-      });
+      const pre = data.responses.find((r) => r.student_id === s.id && r.phase === "pre");
+      const c = carbon.find((x) => x.student_id === s.id);
+      lines.push([s.pseudonym, s.class_name,
+        ...PERCEPTION_QUESTIONS.map((_, i) => pre ? items(pre.perception)[i] : ""),
+        num(c?.total), ...stages.map((k) => num(c?.breakdown[k])),
+        num(c?.eco.gha), num(c?.eco.planets), ...areas.map((k) => num(c?.eco.byArea[k])),
+        ...CARBON_QUESTIONS.map((q) => (c ? q.options[c.answers[q.id] ?? -1] : "")),
+        pre?.feedback].map(csvCell).join(";"));
     });
     const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -110,7 +102,7 @@ function Professor() {
 
   if (!data || !stats) return <div className="flex min-h-screen items-center justify-center text-4xl animate-pulse">🌱</div>;
   const selStudent = data.students.find((s) => s.id === sel);
-  const selResp = data.responses.filter((r) => r.student_id === sel);
+  const selPre = data.responses.find((r) => r.student_id === sel && r.phase === "pre");
 
   return (
     <main className="min-h-screen pb-16">
@@ -125,10 +117,10 @@ function Professor() {
       </header>
       <div className="mx-auto max-w-6xl space-y-6 px-4 pt-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Responderam o Pré" value={`${stats.pre.length}/${data.students.length}`} />
-          <Stat label="Responderam o Pós" value={`${stats.post.length}/${data.students.length}`} />
-          <Stat label="Média de Terras (Pré → Pós)" value={`${stats.oldPre.length ? stats.avgPre.toFixed(1) : "—"} → ${stats.oldPost.length ? stats.avgPost.toFixed(1) : "—"}`} />
-          <Stat label="Categoria de maior impacto" value={stats.top ? CATEGORY_LABEL[stats.top] : "—"} />
+          <Stat label="Responderam percepção" value={`${stats.pre.length}/${data.students.length}`} />
+          <Stat label="Responderam calculadora" value={`${stats.cls.k}/${data.students.length}`} />
+          <Stat label="Média de Terras" value={stats.cls.k ? stats.cls.avgPlanets.toFixed(1) : "—"} />
+          <Stat label="Etapa de maior impacto" value={stats.top ? STAGE_LABEL[stats.top] : "—"} />
         </div>
 
         {carbon.length > 0 && (() => {
@@ -146,10 +138,10 @@ function Professor() {
           );
         })()}
 
-        {stats.oldPre.length > 0 && (
+        {stats.cls.k > 0 && (
           <div className="rounded-3xl bg-card p-6 shadow-soft">
-            <h2 className="mb-4 text-xl font-bold">Distribuição média da turma (Pré)</h2>
-            <FootprintDonut data={stats.bPre} labels={CATEGORY_LABEL} colors={CAT_COLOR} />
+            <h2 className="mb-4 text-xl font-bold">Pegada ecológica média da turma, por tipo de área</h2>
+            <FootprintDonut data={stats.cls.avgAreas} labels={AREA_LABEL} colors={AREA_COLOR} unit="gha" />
           </div>
         )}
 
@@ -157,21 +149,21 @@ function Professor() {
           <div className="overflow-x-auto rounded-3xl bg-card shadow-soft">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left"><tr>
-                <th className="p-3">Aluno</th><th className="p-3">PIN</th><th className="p-3">Pré</th><th className="p-3">Pós</th><th className="p-3">Terras</th><th className="p-3">CO₂/ano</th><th className="p-3"></th>
+                <th className="p-3">Aluno</th><th className="p-3">PIN</th><th className="p-3">Percepção</th><th className="p-3">Calculadora</th><th className="p-3">CO₂/ano</th><th className="p-3">Terras</th><th className="p-3"></th>
               </tr></thead>
               <tbody>
                 {data.students.map((s) => {
                   const pre = data.responses.find((r) => r.student_id === s.id && r.phase === "pre");
-                  const post = data.responses.find((r) => r.student_id === s.id && r.phase === "post");
+                  const c = carbon.find((x) => x.student_id === s.id);
                   return (
                     <tr key={s.id} className="border-t">
                       <td className="p-3 font-bold">{s.pseudonym}</td>
                       <td className="p-3">{s.hasPin ? <button className="text-xs text-muted-foreground underline" onClick={async () => { if (confirm(`Redefinir o PIN de ${s.pseudonym}? O aluno criará um novo no próximo acesso.`)) { await resetFn({ data: { token, studentId: s.id } }); toast.success("PIN redefinido"); load(token); } }}>redefinir</button> : <span className="text-xs text-muted-foreground">não criado</span>}</td>
                       <td className="p-3">{pre ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
-                      <td className="p-3">{post ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
-                      <td className="p-3">{pre && hasHabits(pre) ? `${pre.planets.toFixed(1)}${post && hasHabits(post) ? ` → ${post.planets.toFixed(1)}` : ""}` : "—"}</td>
-                      <td className="p-3">{(() => { const c = carbon.find((x) => x.student_id === s.id); return c ? formatKg(c.total) : "—"; })()}</td>
-                      <td className="p-3">{(pre || s.seedPerception || carbon.some((x) => x.student_id === s.id)) && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
+                      <td className="p-3">{c ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
+                      <td className="p-3">{c ? formatKg(c.total) : "—"}</td>
+                      <td className="p-3">{c ? c.eco.planets.toFixed(1) : "—"}</td>
+                      <td className="p-3">{(pre || s.seedPerception || c) && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
                     </tr>
                   );
                 })}
@@ -201,35 +193,28 @@ function Professor() {
               ))}
             </section>
           )}
+          {selPre && (
+            <section className="space-y-2 border-b pb-6">
+              <h3 className="text-xl font-bold">Percepção Ambiental</h3>
+              {PERCEPTION_QUESTIONS.map((q, i) => (
+                <div key={i} className="rounded-xl bg-muted p-3 text-sm"><p className="font-semibold">{q}</p><p className="whitespace-pre-line">{items(selPre.perception)[i]}</p></div>
+              ))}
+            </section>
+          )}
           {(() => {
             const c = carbon.find((x) => x.student_id === sel);
             if (!c) return null;
             return (
-              <section className="space-y-3 border-b pb-6">
+              <section className="space-y-4 pb-6">
                 <h3 className="text-xl font-bold">Calculadora de carbono · {formatKg(c.total)}/ano</h3>
                 <div className="flex flex-wrap gap-2 text-sm">{(Object.keys(STAGE_LABEL) as Stage[]).map((k) => <span key={k} className="rounded-full bg-muted px-3 py-1">{STAGE_LABEL[k]}: {formatKg(c.breakdown[k])}</span>)}</div>
+                <Planets value={c.eco.planets} size="sm" />
+                <FootprintDonut data={c.eco.byArea} labels={AREA_LABEL} colors={AREA_COLOR} unit="gha" />
                 <ul className="grid gap-1 text-sm sm:grid-cols-2">{CARBON_QUESTIONS.map((q) => <li key={q.id}><b>{q.id.toUpperCase()}:</b> {q.options[c.answers[q.id] ?? 0]}</li>)}</ul>
+                <Feedback text={selPre?.feedback ?? null} />
               </section>
             );
           })()}
-          {(["pre", "post"] as const).map((ph) => {
-            const r = selResp.find((x) => x.phase === ph);
-            if (!r) return null;
-            const a = r.answers as Record<string, number>;
-            return (
-              <section key={ph} className="space-y-4 border-b pb-6">
-                <h3 className="text-xl font-bold">{ph === "pre" ? "Diagnóstico Inicial" : "Pós-Intervenção"}</h3>
-                {hasHabits(r) && <Planets value={r.planets} size="sm" />}
-                <div className="space-y-2">{PERCEPTION_QUESTIONS.map((q, i) => (
-                  <div key={i} className="rounded-xl bg-muted p-3 text-sm"><p className="font-semibold">{q}</p><p>{items(r.perception)[i]}</p></div>
-                ))}</div>
-                {hasHabits(r) && <ul className="grid gap-1 text-sm sm:grid-cols-2">{QUESTIONS.map((q) => (
-                  <li key={q.id}><b>{q.id.toUpperCase()}:</b> {q.options.find((o) => o.score === a[q.id])?.label}</li>
-                ))}</ul>}
-                <Feedback text={r.ai_feedback} />
-              </section>
-            );
-          })}
         </DialogContent>
       </Dialog>
     </main>

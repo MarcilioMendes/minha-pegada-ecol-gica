@@ -10,32 +10,22 @@ Requisitos centrais do produto:
 - Acesso do Professor com senha administrativa para visualizar o painel geral da turma, acompanhar quem respondeu o Pré e o Pós, e exportar os dados em CSV/Excel.
 
 2. Fluxo do Aluno:
-- Fase 1 (Diagnóstico Inicial / Pré-Intervenção):
-  a) Percepção Ambiental: Perguntas abertas reflexivas baseadas no questionário diagnóstico já aplicado:
-     1. Escreva alguma coisa que está acontecendo com o meio ambiente e que você acha importante ou preocupante.
-     2. Explique, com suas palavras, o que acontece nessa situação.
-     3. Na sua opinião, quem ou o que faz isso acontecer?
-     4. O que faria isso diminuir?
-     5. Tem alguma coisa no seu dia a dia que tem relação com isso? Se sim, o quê?
-  b) Questionário de Pegada Ecológica (10 perguntas adaptadas para o 8º ano com linguagem acessível, divididas em Alimentação, Transporte, Moradia/Energia e Consumo/Lixo):
-     - Q1 (Alimentação): Com que frequência você come carne (bovina/frango) durante a semana?
-     - Q2 (Alimentação): Como costuma ser o desperdício de comida no seu prato?
-     - Q3 (Alimentação): Quanto da sua alimentação vem de alimentos ultraprocessados (salgadinhos, refrigerantes, biscoitos)?
-     - Q4 (Transporte): Como você costuma ir para a escola ou passear no dia a dia? (A pé/bike, transporte público/van, carona/carro próprio)
-     - Q5 (Energia/Água): Quanto tempo dura o seu banho diário em média?
-     - Q6 (Energia/Água): Você ou sua família costumam deixar luzes acesas ou aparelhos na tomada sem ninguém usando?
-     - Q7 (Energia/Água): Na sua casa usam ar-condicionado ou ventilador com frequência?
-     - Q8 (Consumo): Com que frequência você compra ou ganha roupas/calçados novos sem necessidade urgente?
-     - Q9 (Consumo): O que acontece quando um aparelho eletrônico ou brinquedo estraga? (Tenta consertar / compra outro novo)
-     - Q10 (Resíduos): Na sua casa existe separação do lixo reciclável (papel, plástico, vidro)?
-  c) Cálculo Determinístico e Visualização dos Resultados:
-     - Cálculo de "Quantos Planetas Terra seriam necessários se todos vivessem como você" (ex: 1.8 Terras, 2.5 Terras).
-     - Gráfico visual moderno e intuitivo (rosca ou barras) mostrando a distribuição da pegada por categoria (Alimentação, Transporte, Energia/Água, Consumo/Resíduos).
+- Etapa 1 (Percepção Ambiental): perguntas abertas reflexivas baseadas no questionário diagnóstico já aplicado:
+  1. Escreva alguma coisa que está acontecendo com o meio ambiente e que você acha importante ou preocupante.
+  2. Explique, com suas palavras, o que acontece nessa situação.
+  3. Na sua opinião, quem ou o que faz isso acontecer?
+  4. O que faria isso diminuir?
+  5. Tem alguma coisa no seu dia a dia que tem relação com isso? Se sim, o quê?
+- Etapa 2 (Calculadora de Carbono e Pegada Ecológica), liberada depois da percepção:
+  a) Questionário de 21 perguntas adaptado da ISO 14067, com linguagem acessível (contexto, alimentação, transporte, aviação, energia, consumo e resíduos).
+  b) Cálculo determinístico:
+     - Pegada de carbono em kg CO₂e por ano, por etapa (`src/lib/carbon.ts`).
+     - Pegada ecológica em hectares globais e em "quantos Planetas Terra seriam necessários se todos vivessem como você", por tipo de área, pelo método híbrido da Global Footprint Network (`src/lib/footprint.ts`).
+  c) Resultado com placar, pegada ecológica, comparações com a média da turma, com celebridades e com o Brasil (SEEG), e o botão "Mostrar as contas".
   d) Feedback Pedagógico Personalizado por IA:
      - Prompt pedagógico estruturado para tom encorajador, empático e socrático para adolescentes de 13-14 anos.
-     - A IA deve analisar a conexão entre a preocupação aberta do aluno (ex: desmatamento, queimadas) e os hábitos revelados na pegada (ex: consumo de carne, energia), explicando a relação sistêmica de forma simples e propondo 2 a 3 missões práticas realistas para o cotidiano.
-- Fase 2 (Pós-Intervenção):
-  - Permite ao aluno revisitar a reflexão após a aula/intervenção pedagógica, reavaliar seus hábitos e ver um comparativo visual lado a lado ("Antes vs. Depois"), destacando o amadurecimento e a redução da pegada.
+     - A IA analisa a conexão entre a preocupação aberta do aluno (ex: desmatamento, queimadas) e os hábitos revelados na calculadora (ex: consumo de carne, energia), explicando a relação sistêmica de forma simples e propondo 2 a 3 missões práticas realistas para o cotidiano.
+- A fase "Depois da Aula" (pós-intervenção) está oculta por enquanto (`SHOW_POST_PHASE` em `src/routes/aluno.tsx`) e será redesenhada sobre a calculadora.
 
 3. Painel do Professor:
   - Lista de alunos por pseudônimo com status (Pré respondido, Pós respondido).
