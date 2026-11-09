@@ -178,7 +178,7 @@ export const getMyCarbon = createServerFn({ method: "POST" })
     const cls = await classCarbon(sb);
     return {
       mine: mine ? { answers: mine.answers as Record<string, number>, total: Number(mine.total_kg), breakdown: mine.breakdown as CarbonBreakdown, eco: computeEcological(mine.answers as Record<string, number>) } : null,
-      classK: cls.k, classSum: cls.sum, cls,
+      cls,
     };
   });
 

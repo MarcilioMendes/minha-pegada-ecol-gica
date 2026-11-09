@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import {
-  CARBON_QUESTIONS, STAGE_LABEL, CELEBRITIES, BRASIL, CLASS_SIZE, formatKg, timeEquivalent,
+  CARBON_QUESTIONS, STAGE_LABEL, CELEBRITIES, CLASS_SIZE, formatKg, timeEquivalent,
   type CarbonBreakdown,
 } from "@/lib/carbon";
-import type { EcoResult } from "@/lib/footprint";
+import type { ClassAggregate, EcoResult } from "@/lib/footprint";
 import { ScorePanel } from "@/components/eco/result/ScorePanel";
 import { EcoPanel } from "@/components/eco/result/EcoPanel";
+import { ClassPanel } from "@/components/eco/result/ClassPanel";
+import { BrasilPanel } from "@/components/eco/result/BrasilPanel";
 
 export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<string, number> | undefined; busy: boolean; onSubmit: (a: Record<string, number>) => void }) {
   const [step, setStep] = useState(0);
@@ -54,25 +56,15 @@ export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<strin
   );
 }
 
-export function CarbonResult({ total, breakdown, eco, classK, classSum }: { total: number; breakdown: CarbonBreakdown; eco: EcoResult; classK: number; classSum: number }) {
+export function CarbonResult({ total, breakdown, eco, cls }: { total: number; breakdown: CarbonBreakdown; eco: EcoResult; cls: ClassAggregate }) {
   const [celeb, setCeleb] = useState(0);
   const c = CELEBRITIES[celeb]!;
-  const avg = classK ? classSum / classK : 0;
-  const share = classSum ? (total / classSum) * 100 : 0;
-  const est = classK && classK < CLASS_SIZE ? (classSum * CLASS_SIZE) / classK : null;
   const b = breakdown;
-  const brRows: [string, number, number][] = [
-    ["Alimentação × Agropecuária", b.alimentacao, BRASIL.agro],
-    ["Alimentação × Agropecuária + Uso da terra", b.alimentacao, BRASIL.agro + BRASIL.usoTerra],
-    ["Transporte + Aviação + Energia × Energia", b.transporte + b.aviacao + b.energia, BRASIL.energia],
-    ["Consumo × Processos industriais", b.consumo, BRASIL.industria],
-    ["Resíduos × Resíduos", b.residuos, BRASIL.residuos],
-    ["Total × Emissões brutas", total, BRASIL.bruto],
-  ];
   return (
     <div className="space-y-6">
       <ScorePanel total={total} breakdown={breakdown} planets={eco.planets} />
       <EcoPanel eco={eco} />
+      <ClassPanel total={total} breakdown={breakdown} planets={eco.planets} cls={cls} />
 
       <div className="space-y-4 rounded-3xl bg-card p-6 shadow-soft">
         <h2 className="text-xl font-bold">✈️ Comparar com uma celebridade</h2>
@@ -88,30 +80,15 @@ export function CarbonResult({ total, breakdown, eco, classK, classSum }: { tota
         <div className="grid gap-3 sm:grid-cols-3">
           <Compare label="Você levaria" value={timeEquivalent(c.kg, total)} sub="para emitir o mesmo, com tudo que você faz" />
           <Compare label="Se a turma toda fosse como você" value={timeEquivalent(c.kg, total * CLASS_SIZE)} sub={`${CLASS_SIZE} alunos × ${formatKg(total)}`} />
-          <Compare label="A turma real levaria" value={classK ? timeEquivalent(c.kg, classSum) : "—"} sub={`${classK} resposta(s): ${formatKg(classSum)}/ano`} />
+          <Compare label="A turma real levaria" value={cls.k ? timeEquivalent(c.kg, cls.sum) : "—"} sub={`${cls.k} resposta(s): ${formatKg(cls.sum)}/ano`} />
         </div>
         <p className="text-sm text-muted-foreground">
           Comparação justa (mesmo recorte, só voos): sua aviação é {formatKg(b.aviacao)}/ano
           {b.aviacao > 0 ? ` — levaria ${timeEquivalent(c.kg, b.aviacao)} para igualar.` : " — você não voou, então nunca chegaria lá."}
         </p>
-        {est && <p className="text-xs text-muted-foreground">Ainda faltam respostas: a turma completa ({CLASS_SIZE} alunos) é estimada em {formatKg(est)}/ano.</p>}
       </div>
 
-      <div className="space-y-4 rounded-3xl bg-card p-6 shadow-soft">
-        <h2 className="text-xl font-bold">🇧🇷 Você × brasileiro médio (SEEG 2025)</h2>
-        <div className="space-y-2">
-          {brRows.map(([label, me, br]) => (
-            <div key={label}>
-              <div className="flex justify-between text-sm"><span className="font-semibold">{label}</span><span>{formatKg(me)} vs {formatKg(br)} · <b>{(me / br).toFixed(2)}×</b></span></div>
-              <div className="h-2.5 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (me / br) * 100)}%` }} /></div>
-            </div>
-          ))}
-        </div>
-        {classK > 0 && (
-          <p className="text-sm">Você é <b>{share.toFixed(1)}%</b> da turma; a média é {formatKg(avg)} ({total >= avg ? "+" : "−"}{formatKg(Math.abs(total - avg))}). Juntos, vocês emitem o mesmo que <b>{(classSum / BRASIL.bruto).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} brasileiros médios</b>.</p>
-        )}
-        <p className="text-xs text-muted-foreground">A floresta brasileira removeu {formatKg(BRASIL.remocoes)} por habitante em 2025. O questionário não inclui escola, saúde e serviços públicos, por isso costuma ficar abaixo de 9,6 t.</p>
-      </div>
+      <BrasilPanel total={total} breakdown={breakdown} cls={cls} />
     </div>
   );
 }

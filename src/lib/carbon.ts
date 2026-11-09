@@ -108,6 +108,20 @@ export const CELEBRITIES: Celebrity[] = [
 // SEEG 2025, por habitante (kg CO2e/ano).
 export const BRASIL = { agro: 2935, usoTerra: 3816, energia: 2000, residuos: 449, industria: 442, bruto: 9642, remocoes: 3056 };
 export const CLASS_SIZE = 30;
+// SEEG 2025, totais em t CO2e. Os valores por habitante acima vêm destes, com a população abaixo.
+export const SEEG = {
+  pop: 213.4e6,
+  setores: [
+    { nome: "Mudança de uso da terra e floresta", t: 814_269_171 },
+    { nome: "Agropecuária", t: 626_251_312 },
+    { nome: "Energia", t: 426_807_805 },
+    { nome: "Resíduos", t: 95_781_720 },
+    { nome: "Processos industriais", t: 94_411_437 },
+  ],
+  brutas: 2_057_521_444,
+  remocoes: -652_069_274,
+  liquidas: 1_405_452_170,
+};
 
 // ---------- Comparação com celebridades (modelo "Pegada da Turma") ----------
 export type CelebEvent = {
