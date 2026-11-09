@@ -47,7 +47,7 @@ export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<strin
       <div className="flex justify-between">
         <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}><ArrowLeft /> Voltar</Button>
         {last ? (
-          <Button size="lg" className="rounded-full" disabled={!done || busy} onClick={() => onSubmit(answers)}>{busy ? "Calculando..." : "Ver minha pegada de carbono 🌎"}</Button>
+          <Button size="lg" className="rounded-full" disabled={!done || busy} onClick={() => onSubmit(answers)}>{busy ? "Calculando e pensando no seu feedback..." : "Ver minha pegada de carbono 🌎"}</Button>
         ) : (
           <Button size="lg" className="rounded-full" disabled={!done} onClick={() => setStep((s) => s + 1)}>Próxima <ArrowRight /></Button>
         )}

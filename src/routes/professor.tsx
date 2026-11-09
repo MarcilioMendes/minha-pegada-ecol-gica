@@ -28,6 +28,7 @@ export const Route = createFileRoute("/professor")({
 type Overview = Awaited<ReturnType<typeof teacherOverview>>;
 type R = Overview["responses"][number];
 const items = (p: unknown) => (p as { items?: string[] })?.items ?? [];
+const hasHabits = (r: R) => Object.keys((r.answers ?? {}) as object).length > 0;
 
 function Professor() {
   const loginFn = useServerFn(teacherLogin);
@@ -62,7 +63,9 @@ function Professor() {
       return b;
     };
     const pre = by("pre"), post = by("post");
-    return { pre, post, avgPre: avg(pre), avgPost: avg(post), bPre: sumB(pre), top: pre.length ? topCategory(sumB(pre)) : null };
+    // Só as linhas antigas têm Terras e categorias; as novas guardam apenas a percepção.
+    const oldPre = pre.filter(hasHabits), oldPost = post.filter(hasHabits);
+    return { pre, post, oldPre, oldPost, avgPre: avg(oldPre), avgPost: avg(oldPost), bPre: sumB(oldPre), top: oldPre.length ? topCategory(sumB(oldPre)) : null };
   }, [data]);
 
   function exportCsv() {
@@ -75,7 +78,7 @@ function Professor() {
         const b = r.breakdown as Breakdown;
         const a = r.answers as Record<string, number>;
         lines.push([s.pseudonym, s.class_name, r.phase === "pre" ? "Pré" : "Pós", new Date(r.updated_at).toLocaleString("pt-BR"), String(r.planets).replace(".", ","),
-          ...(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => String(b[k]).replace(".", ",")),
+          ...(Object.keys(CATEGORY_LABEL) as Category[]).map((k) => String(b[k] ?? "").replace(".", ",")),
           ...PERCEPTION_QUESTIONS.map((_, i) => items(r.perception)[i]),
           ...QUESTIONS.map((q) => q.options.find((o) => o.score === a[q.id])?.label),
           r.ai_feedback].map(esc).join(";"));
@@ -124,7 +127,7 @@ function Professor() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Responderam o Pré" value={`${stats.pre.length}/${data.students.length}`} />
           <Stat label="Responderam o Pós" value={`${stats.post.length}/${data.students.length}`} />
-          <Stat label="Média de Terras (Pré → Pós)" value={`${stats.avgPre.toFixed(1)} → ${stats.post.length ? stats.avgPost.toFixed(1) : "—"}`} />
+          <Stat label="Média de Terras (Pré → Pós)" value={`${stats.oldPre.length ? stats.avgPre.toFixed(1) : "—"} → ${stats.oldPost.length ? stats.avgPost.toFixed(1) : "—"}`} />
           <Stat label="Categoria de maior impacto" value={stats.top ? CATEGORY_LABEL[stats.top] : "—"} />
         </div>
 
@@ -143,7 +146,7 @@ function Professor() {
           );
         })()}
 
-        {stats.pre.length > 0 && (
+        {stats.oldPre.length > 0 && (
           <div className="rounded-3xl bg-card p-6 shadow-soft">
             <h2 className="mb-4 text-xl font-bold">Distribuição média da turma (Pré)</h2>
             <FootprintDonut breakdown={stats.bPre} />
@@ -166,7 +169,7 @@ function Professor() {
                       <td className="p-3">{s.hasPin ? <button className="text-xs text-muted-foreground underline" onClick={async () => { if (confirm(`Redefinir o PIN de ${s.pseudonym}? O aluno criará um novo no próximo acesso.`)) { await resetFn({ data: { token, studentId: s.id } }); toast.success("PIN redefinido"); load(token); } }}>redefinir</button> : <span className="text-xs text-muted-foreground">não criado</span>}</td>
                       <td className="p-3">{pre ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{post ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
-                      <td className="p-3">{pre ? `${pre.planets.toFixed(1)}${post ? ` → ${post.planets.toFixed(1)}` : ""}` : "—"}</td>
+                      <td className="p-3">{pre && hasHabits(pre) ? `${pre.planets.toFixed(1)}${post && hasHabits(post) ? ` → ${post.planets.toFixed(1)}` : ""}` : "—"}</td>
                       <td className="p-3">{(() => { const c = carbon.find((x) => x.student_id === s.id); return c ? formatKg(c.total) : "—"; })()}</td>
                       <td className="p-3">{(pre || s.seedPerception || carbon.some((x) => x.student_id === s.id)) && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
                     </tr>
@@ -216,13 +219,13 @@ function Professor() {
             return (
               <section key={ph} className="space-y-4 border-b pb-6">
                 <h3 className="text-xl font-bold">{ph === "pre" ? "Diagnóstico Inicial" : "Pós-Intervenção"}</h3>
-                <Planets value={r.planets} size="sm" />
+                {hasHabits(r) && <Planets value={r.planets} size="sm" />}
                 <div className="space-y-2">{PERCEPTION_QUESTIONS.map((q, i) => (
                   <div key={i} className="rounded-xl bg-muted p-3 text-sm"><p className="font-semibold">{q}</p><p>{items(r.perception)[i]}</p></div>
                 ))}</div>
-                <ul className="grid gap-1 text-sm sm:grid-cols-2">{QUESTIONS.map((q) => (
+                {hasHabits(r) && <ul className="grid gap-1 text-sm sm:grid-cols-2">{QUESTIONS.map((q) => (
                   <li key={q.id}><b>{q.id.toUpperCase()}:</b> {q.options.find((o) => o.score === a[q.id])?.label}</li>
-                ))}</ul>
+                ))}</ul>}
                 <Feedback text={r.ai_feedback} />
               </section>
             );

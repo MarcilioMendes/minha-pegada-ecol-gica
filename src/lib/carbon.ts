@@ -76,6 +76,11 @@ export function computeCarbon(a: Record<string, number>): { total: number; break
   return { total: r1(alimentacao + transporte + aviacao + energia + consumo + residuos), breakdown };
 }
 
+/** Chave de maior valor de um registro (ex.: a etapa ou a área de maior impacto). */
+export function topKey<K extends string>(o: Record<K, number>): K {
+  return (Object.keys(o) as K[]).reduce((a, k) => (o[k] > o[a] ? k : a));
+}
+
 export const formatKg = (kg: number) =>
   kg >= 1000 ? `${(kg / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t` : `${Math.round(kg).toLocaleString("pt-BR")} kg`;
 
