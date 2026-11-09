@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeCarbon, timeEquivalent, CELEBS, celebRate, duration, durationText, carEquivalent } from "./carbon";
+import { computeCarbon, timeEquivalent, BRASIL, SEEG, CELEBS, celebRate, duration, durationText, carEquivalent } from "./carbon";
 
 // Exemplo resolvido da "Ana" no documento norteador.
 const ana: Record<string, number> = {
@@ -35,6 +35,15 @@ describe("duration", () => {
   it("horas", () => expect(durationText(3 / 24)).toBe("3,0 horas"));
   it("dias", () => expect(durationText(45)).toBe("45 dias"));
   it("anos", () => expect(durationText(365 * 12)).toBe("12 anos"));
+});
+
+describe("SEEG", () => {
+  it("os valores por habitante vêm dos totais", () => {
+    const pc = (t: number) => Math.round((t / SEEG.pop) * 1000);
+    expect(pc(SEEG.brutas)).toBe(BRASIL.bruto);
+    expect(pc(-SEEG.remocoes)).toBe(BRASIL.remocoes);
+    expect(SEEG.setores.map((s) => pc(s.t))).toEqual([BRASIL.usoTerra, BRASIL.agro, BRASIL.energia, BRASIL.residuos, BRASIL.industria]);
+  });
 });
 
 describe("carEquivalent", () => {
