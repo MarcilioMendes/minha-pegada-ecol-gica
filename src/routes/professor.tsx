@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin, teacherCarbon } from "@/lib/api.functions";
 import { CATEGORY_LABEL, PERCEPTION_QUESTIONS, QUESTIONS, topCategory, type Breakdown, type Category } from "@/lib/footprint";
 import { Planets, FootprintDonut, CAT_COLOR } from "@/components/eco/FootprintChart";
-import { formatKg, STAGE_LABEL, CARBON_QUESTIONS, CELEBRITIES, type Stage } from "@/lib/carbon";
+import { formatKg, STAGE_LABEL, CARBON_QUESTIONS, CELEBS, type Stage } from "@/lib/carbon";
 import { Feedback } from "@/components/eco/Feedback";
 import { Download, LogOut, UserPlus, Check, Minus } from "lucide-react";
 
@@ -141,7 +141,7 @@ function Professor() {
               <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
                 {st.map((k) => <div key={k} className="rounded-xl bg-muted p-3 text-sm"><p className="font-semibold">{STAGE_LABEL[k]}</p><p>{formatKg(carbon.reduce((a, c) => a + c.breakdown[k], 0) / carbon.length)}</p></div>)}
               </div>
-              <p className="text-sm text-muted-foreground">A turma levaria {(CELEBRITIES[1]!.kg / sum).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} anos para emitir o que o jato da Taylor Swift emitiu em ~200 dias de 2022.</p>
+              <p className="text-sm text-muted-foreground">A turma levaria {(CELEBS.find((c) => c.id === "taylor")!.eventos[0]!.E / sum).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} anos para emitir o que o jato da Taylor Swift emitiu em ~200 dias de 2022.</p>
             </div>
           );
         })()}
