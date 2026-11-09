@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin, teacherCarbon } from "@/lib/api.functions";
 import { CATEGORY_LABEL, PERCEPTION_QUESTIONS, QUESTIONS, topCategory, type Breakdown, type Category } from "@/lib/footprint";
-import { Planets, FootprintDonut } from "@/components/eco/FootprintChart";
+import { Planets, FootprintDonut, CAT_COLOR } from "@/components/eco/FootprintChart";
 import { formatKg, STAGE_LABEL, CARBON_QUESTIONS, CELEBRITIES, type Stage } from "@/lib/carbon";
 import { Feedback } from "@/components/eco/Feedback";
 import { Download, LogOut, UserPlus, Check, Minus } from "lucide-react";
@@ -149,7 +149,7 @@ function Professor() {
         {stats.oldPre.length > 0 && (
           <div className="rounded-3xl bg-card p-6 shadow-soft">
             <h2 className="mb-4 text-xl font-bold">Distribuição média da turma (Pré)</h2>
-            <FootprintDonut breakdown={stats.bPre} />
+            <FootprintDonut data={stats.bPre} labels={CATEGORY_LABEL} colors={CAT_COLOR} />
           </div>
         )}
 

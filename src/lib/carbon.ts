@@ -164,7 +164,7 @@ export function celebRate(ev: CelebEvent, freq?: number): number | null {
   return null;
 }
 
-const nf = (v: number, d = 0) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+export const nf = (v: number, d = 0) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 
 /** Converte uma duração em dias para a unidade mais legível (segundos … anos). */
 export function duration(days: number): { v: string; u: string } {

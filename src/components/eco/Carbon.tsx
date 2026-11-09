@@ -4,13 +4,11 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import {
   CARBON_QUESTIONS, STAGE_LABEL, CELEBRITIES, BRASIL, CLASS_SIZE, formatKg, timeEquivalent,
-  type CarbonBreakdown, type Stage,
+  type CarbonBreakdown,
 } from "@/lib/carbon";
-
-const STAGE_COLOR: Record<Stage, string> = {
-  alimentacao: "var(--chart-1)", transporte: "var(--chart-2)", aviacao: "var(--chart-5)",
-  energia: "var(--chart-3)", consumo: "var(--chart-4)", residuos: "var(--muted-foreground)",
-};
+import type { EcoResult } from "@/lib/footprint";
+import { ScorePanel } from "@/components/eco/result/ScorePanel";
+import { EcoPanel } from "@/components/eco/result/EcoPanel";
 
 export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<string, number> | undefined; busy: boolean; onSubmit: (a: Record<string, number>) => void }) {
   const [step, setStep] = useState(0);
@@ -56,10 +54,9 @@ export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<strin
   );
 }
 
-export function CarbonResult({ total, breakdown, classK, classSum }: { total: number; breakdown: CarbonBreakdown; classK: number; classSum: number }) {
+export function CarbonResult({ total, breakdown, eco, classK, classSum }: { total: number; breakdown: CarbonBreakdown; eco: EcoResult; classK: number; classSum: number }) {
   const [celeb, setCeleb] = useState(0);
   const c = CELEBRITIES[celeb]!;
-  const stages = Object.keys(breakdown) as Stage[];
   const avg = classK ? classSum / classK : 0;
   const share = classSum ? (total / classSum) * 100 : 0;
   const est = classK && classK < CLASS_SIZE ? (classSum * CLASS_SIZE) / classK : null;
@@ -74,30 +71,8 @@ export function CarbonResult({ total, breakdown, classK, classSum }: { total: nu
   ];
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-        <div className="space-y-3 rounded-3xl bg-hero p-6 text-center text-primary-foreground shadow-soft">
-          <p className="font-semibold opacity-90">Sua pegada de carbono estimada é</p>
-          <p className="font-display text-5xl font-extrabold">{formatKg(total)}</p>
-          <p className="opacity-90">de CO₂e por ano</p>
-          <p className="text-xs opacity-80">É uma ordem de grandeza, não uma medição exata.</p>
-        </div>
-        <div className="space-y-3 rounded-3xl bg-card p-6 shadow-soft">
-          <h2 className="text-xl font-bold">De onde vem</h2>
-          <div className="flex h-4 overflow-hidden rounded-full">
-            {stages.map((s) => <div key={s} style={{ width: `${(b[s] / (total || 1)) * 100}%`, background: STAGE_COLOR[s] }} />)}
-          </div>
-          <ul className="space-y-1.5 text-sm">
-            {stages.map((s) => (
-              <li key={s} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5">
-                <span className="h-3 w-3 rounded-full" style={{ background: STAGE_COLOR[s] }} />
-                <span className="flex-1 font-semibold">{STAGE_LABEL[s]}</span>
-                <span>{formatKg(b[s])}</span>
-                <span className="w-10 text-right text-muted-foreground">{Math.round((b[s] / (total || 1)) * 100)}%</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <ScorePanel total={total} breakdown={breakdown} planets={eco.planets} />
+      <EcoPanel eco={eco} />
 
       <div className="space-y-4 rounded-3xl bg-card p-6 shadow-soft">
         <h2 className="text-xl font-bold">✈️ Comparar com uma celebridade</h2>
