@@ -70,7 +70,19 @@ export type EcoResult = {
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
+const sumValues = (o: Record<string, number>) => Object.values(o).reduce((s, v) => s + v, 0);
+
+/** Pegada ecológica em gha, sem arredondar. */
+export const ecologicalGha = (a: Record<string, number>): number => sumValues(ecologicalRaw(a).byArea);
+
 export function computeEcological(a: Record<string, number>): EcoResult {
+  const { byArea, byStage } = ecologicalRaw(a);
+  const gha = sumValues(byArea);
+  const round = <K extends string>(o: Record<K, number>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, r2(v as number)])) as Record<K, number>;
+  return { gha: r2(gha), planets: r2(gha / BIOCAP_MUNDIAL), byArea: round(byArea), byStage: round(byStage) };
+}
+
+function ecologicalRaw(a: Record<string, number>): { byArea: Record<Area, number>; byStage: Record<Stage | "base", number> } {
   const pick = <T,>(id: string, t: readonly T[]): T => t[a[id] ?? 0] ?? t[0]!;
   const waste = pick("q6", FOOD_TABLES.q6);
   const { breakdown } = computeCarbon(a);
@@ -100,9 +112,7 @@ export function computeEcological(a: Record<string, number>): EcoResult {
     alimentacao: foodCrop + foodPast + ultra, transporte: stagesC.transporte, aviacao: stagesC.aviacao,
     energia: stagesC.energia, consumo: stagesC.consumo, residuos: 0, base: BASE_GHA,
   };
-  const gha = Object.values(byAreaRaw).reduce((s, v) => s + v, 0);
-  const round = <K extends string>(o: Record<K, number>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, r2(v as number)])) as Record<K, number>;
-  return { gha: r2(gha), planets: r2(gha / BIOCAP_MUNDIAL), byArea: round(byAreaRaw), byStage: round(byStageRaw) };
+  return { byArea: byAreaRaw, byStage: byStageRaw };
 }
 
 export type ClassRow = { total: number; breakdown: CarbonBreakdown; answers: Record<string, number> };
