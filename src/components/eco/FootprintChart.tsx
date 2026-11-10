@@ -1,6 +1,6 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import type { Area } from "@/lib/footprint";
-import type { Stage } from "@/lib/carbon";
+import { terraWord, type Area } from "@/lib/footprint";
+import { nf, type Stage } from "@/lib/carbon";
 
 export const AREA_COLOR: Record<Area, string> = {
   cultivo: "var(--chart-1)",
@@ -21,6 +21,7 @@ export const STAGE_COLOR: Record<Stage, string> = {
 };
 
 export function Planets({ value, size = "lg" }: { value: number; size?: "lg" | "sm" }) {
+  const shown = Math.round(value * 10) / 10;
   const full = Math.floor(value);
   const frac = value - full;
   const n = size === "lg" ? "text-4xl" : "text-2xl";
@@ -33,7 +34,7 @@ export function Planets({ value, size = "lg" }: { value: number; size?: "lg" | "
         )}
       </div>
       <p className={`font-display font-extrabold text-primary ${size === "lg" ? "text-5xl" : "text-3xl"}`}>
-        {value.toFixed(1)} <span className="text-lg font-semibold text-muted-foreground">Terras</span>
+        {nf(shown, 1)} <span className="text-lg font-semibold text-muted-foreground">{terraWord(shown)}</span>
       </p>
     </div>
   );
@@ -51,7 +52,7 @@ export function FootprintDonut<K extends string>({ data, labels, colors, unit = 
             <Pie data={slices} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="90%" paddingAngle={3} stroke="none">
               {slices.map((d) => <Cell key={d.key} fill={colors[d.key]} />)}
             </Pie>
-            <Tooltip formatter={(v) => `${Number(v).toFixed(2)} ${unit}`} />
+            <Tooltip formatter={(v) => `${nf(Number(v), 2)} ${unit}`} />
           </PieChart>
         </ResponsiveContainer>
       </div>

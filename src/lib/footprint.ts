@@ -1,4 +1,4 @@
-import { computeCarbon, FOOD_TABLES, STAGE_LABEL, type CarbonBreakdown, type Stage } from "./carbon";
+import { computeCarbon, FOOD_TABLES, nf, STAGE_LABEL, type CarbonBreakdown, type Stage } from "./carbon";
 // Pontuação determinística da Pegada Ecológica (a pegada de carbono fica em carbon.ts).
 
 export const PERCEPTION_QUESTIONS = [
@@ -60,6 +60,14 @@ export const BASE_SHARE = 1.7 / 6.18;
 export const BASE_GHA = Math.round(BASE_SHARE * PEGADA_BRASIL * 100) / 100; // ≈ 0,77
 // Divisão da base entre as áreas, na proporção de governo + capital do mesmo CLUM.
 const BASE_SPLIT: Record<Area, number> = { cultivo: 0.13, pastagem: 0.02, pesca: 0, floresta: 0.41, construida: 0.03, carbono: 1.12 };
+
+/** "Terra" abaixo de 2 e "Terras" a partir de 2, pelo número já arredondado que aparece na tela. */
+export const terraWord = (shown: number) => (shown < 2 ? "Terra" : "Terras");
+/** Terras no formato da tela: "0,9 Terra", "2,6 Terras". */
+export function formatTerras(planets: number, digits = 1): string {
+  const shown = Math.round(planets * 10 ** digits) / 10 ** digits;
+  return `${nf(shown, digits)} ${terraWord(shown)}`;
+}
 
 export type EcoResult = {
   gha: number;

@@ -58,7 +58,7 @@ function Aluno() {
       await submit({ data: { token, phase, perception } });
       await load(token);
       setView("home");
-      toast.success(phase === "pre" ? "Reflexão salva! Agora faça a Calculadora de Carbono. 🌎" : "Reflexão salva!");
+      toast.success(phase === "pre" ? "Reflexão salva! Agora faça a etapa 2, a Calculadora da pegada. 🌎" : "Reflexão salva!");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) { toast.error((e as Error).message); }
     finally { setBusy(false); }
@@ -101,9 +101,9 @@ function Aluno() {
             <h1 className="text-3xl font-extrabold sm:text-4xl">Olá, {data.pseudonym}! 👋</h1>
             <p className="text-lg text-muted-foreground">Sua jornada tem duas etapas. Vamos lá?</p>
             <div className="grid gap-5 md:grid-cols-2">
-              <PhaseCard n={1} title="Percepção Ambiental" desc="O que você pensa sobre o meio ambiente? Escreva com suas palavras." done={!!pre}
+              <PhaseCard n={1} title="Minha reflexão" desc="O que você pensa sobre o meio ambiente? Escreva com suas palavras." done={!!pre}
                 action={pre ? <Button variant="outline" onClick={() => setView("pre")}>Ver/editar reflexão</Button> : <Button size="lg" onClick={() => setView("pre")}>Começar 🚀</Button>} />
-              <PhaseCard n={2} title="Calculadora de Carbono e Pegada Ecológica" desc="Quanto CO₂ você emite por ano e quantas Terras seriam precisas? Compare com a turma, com famosos e com o Brasil." done={!!pre && !!carbon?.mine} locked={!pre}
+              <PhaseCard n={2} title="Calculadora da pegada" desc="Quanto CO₂ você emite por ano e quantas Terras seriam necessárias se todos vivessem como você? Compare com a turma, com famosos e com o Brasil." done={!!pre && !!carbon?.mine} locked={!pre}
                 action={!pre ? <Button size="lg" disabled>Começar 🌎</Button>
                   : carbon?.mine ? <><Button onClick={() => setView("result-carbon")}>Ver resultado</Button><Button variant="outline" onClick={() => setView("carbon")}>Refazer</Button></>
                   : <Button size="lg" onClick={() => setView("carbon")}>Começar 🌎</Button>} />
@@ -138,7 +138,7 @@ function PhaseCard({ n, title, desc, done, locked, action }: { n: number; title:
       <div className="flex items-center justify-between">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-hero font-extrabold text-primary-foreground">{n}</span>
         {done ? <span className="flex items-center gap-1 text-sm font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> Concluído</span>
-          : locked ? <span className="flex items-center gap-1 text-sm font-bold text-muted-foreground"><Lock className="h-4 w-4" /> Após a percepção</span> : null}
+          : locked ? <span className="flex items-center gap-1 text-sm font-bold text-muted-foreground"><Lock className="h-4 w-4" /> Libera depois da etapa 1</span> : null}
       </div>
       <h2 className="text-2xl font-bold">{title}</h2>
       <p className="text-muted-foreground">{desc}</p>

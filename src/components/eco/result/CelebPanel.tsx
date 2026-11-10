@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CELEBS, compareCeleb, nf, PERIOD_LABEL, whoCompares, type CarbonBreakdown, type CelebPeriod, type Perspective } from "@/lib/carbon";
-import type { ClassAggregate } from "@/lib/footprint";
+import { MIN_CLASS_K, type ClassAggregate } from "@/lib/footprint";
 
 type Props = { total: number; breakdown: CarbonBreakdown; cls: ClassAggregate; showCalc: boolean };
 
@@ -37,7 +37,7 @@ export function CelebPanel({ total, breakdown, cls, showCalc }: Props) {
     <section className="space-y-5 rounded-3xl bg-card p-6 shadow-soft">
       <div>
         <h2 className="text-xl font-bold">✈️ Eu × famosos</h2>
-        <p className="text-sm text-muted-foreground">Escolha um famoso, quem vai comparar e o período. Os números dos famosos são só dos voos de jatinho ou helicóptero deles.</p>
+        <p className="text-sm text-muted-foreground">Escolha um famoso, quem entra na comparação e o período. Os números dos famosos são só dos voos particulares deles (jatinho, helicóptero ou avião fretado).</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -50,7 +50,7 @@ export function CelebPanel({ total, breakdown, cls, showCalc }: Props) {
       )}
 
       <div className="space-y-2">
-        <p className="text-xs font-bold uppercase text-muted-foreground">Quem compara</p>
+        <p className="text-xs font-bold uppercase text-muted-foreground">Comparar quem?</p>
         <div className="flex flex-wrap gap-2">
           {PERSPECTIVES.map(([p, label]) => <Chip key={p} active={p === persp} onClick={() => setPersp(p)}>{label}</Chip>)}
         </div>
@@ -76,7 +76,9 @@ export function CelebPanel({ total, breakdown, cls, showCalc }: Props) {
       {result.notes.length > 0 && <p className="text-sm">{result.notes.join(" ")}</p>}
 
       {result.kind === "empty" ? (
-        <p className="rounded-2xl bg-secondary p-5 font-display text-xl font-bold text-secondary-foreground">{result.message}</p>
+        <p className="rounded-2xl bg-secondary p-5 font-display text-xl font-bold text-secondary-foreground">
+          {persp === "turma" && cls.k === 0 ? `Os números da turma aparecem quando pelo menos ${MIN_CLASS_K} pessoas tiverem respondido.` : result.message}
+        </p>
       ) : (
         <>
           <p className="rounded-2xl bg-secondary p-5 font-display text-2xl font-bold text-secondary-foreground">
