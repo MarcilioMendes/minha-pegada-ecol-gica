@@ -26,7 +26,7 @@ export function ContasPanel({ answers, eco, open, onToggle }: Props) {
               <li className="rounded-lg bg-muted px-3 py-1.5"><b>Carbono:</b> 1 t de CO₂ fóssil = (1 − 0,28) ÷ 2,68 × 1,26 = {nf(GHA_PER_T_CO2, 3)} gha. Resíduos e metano ficam fora, porque a GFN só conta CO₂.</li>
               <li className="rounded-lg bg-muted px-3 py-1.5"><b>Cultivo e pastagem:</b> m² ÷ 10.000 × fator de equivalência (cultivo 2,51; pastagem 0,46).</li>
               <li className="rounded-lg bg-muted px-3 py-1.5"><b>Parte compartilhada:</b> {nf(BASE_GHA, 2)} gha, igual para todos (governo e infraestrutura).</li>
-              <li className="rounded-lg bg-muted px-3 py-1.5"><b>Terras:</b> {nf(eco.gha, 2)} gha ÷ {nf(BIOCAP_MUNDIAL, 1)} gha por pessoa = {nf(eco.planets, 2)}.</li>
+              <li className="rounded-lg bg-muted px-3 py-1.5"><b>Terras:</b> {nf(eco.gha, 2)} gha ÷ {nf(BIOCAP_MUNDIAL, 2)} gha por pessoa = {nf(eco.planets, 2)}.</li>
             </ul>
           </div>
           <details>
