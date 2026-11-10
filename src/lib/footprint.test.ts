@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeEcological, aggregateClass, shareableClass, GHA_PER_T_CO2, BASE_GHA, BIOCAP_MUNDIAL, PEGADA_BRASIL, TERRAS_BRASIL, TERRAS_MUNDO } from "./footprint";
+import { computeEcological, ecologicalGha, aggregateClass, shareableClass, GHA_PER_T_CO2, BASE_GHA, BIOCAP_MUNDIAL, PEGADA_BRASIL, TERRAS_BRASIL, TERRAS_MUNDO } from "./footprint";
 import { CARBON_QUESTIONS, computeCarbon, topKey } from "./carbon";
 
 // Exemplo resolvido da "Ana" (mesmo de carbon.test.ts).
@@ -35,6 +35,50 @@ describe("computeEcological", () => {
   });
   it("mais carne de boi aumenta a pastagem", () => {
     expect(computeEcological({ ...ana, q1: 3 }).byArea.pastagem).toBeGreaterThan(computeEcological(ana).byArea.pastagem);
+  });
+});
+
+describe("maior, menor e média possíveis (todas as 4^21 combinações)", () => {
+  // Dentro de cada grupo as respostas se multiplicam (moradores dividem os gastos da casa, o
+  // desperdício multiplica a comida, distância × meio de transporte, tempo × aquecimento do banho);
+  // entre grupos a pegada só soma. Assim o máximo, o mínimo e a média saem exatos, grupo a grupo.
+  const GROUPS = [["q0", "q8", "q11", "q12", "q13"], ["q1", "q2", "q3", "q4", "q6"], ["q7", "q7b"], ["q10", "q10b"], ["q9"], ["q14"], ["q15"], ["q16"], ["q17"]];
+  const FORA = ["q5", "q18"]; // debate e resíduos: não entram na pegada ecológica
+  const zero = allC(0);
+  const combos = (ids: string[]) => ids.reduce<Record<string, number>[]>((acc, id) => acc.flatMap((c) => [0, 1, 2, 3].map((o) => ({ ...c, [id]: o }))), [{}]);
+  const f0 = ecologicalGha(zero);
+  const parts = GROUPS.map((g) => combos(g).map((c) => ({ c, d: ecologicalGha({ ...zero, ...c }) - f0 })));
+  const best = (better: (x: number, y: number) => boolean) => Object.assign({}, zero, ...parts.map((p) => p.reduce((b, x) => (better(x.d, b.d) ? x : b)).c));
+  const max = best((x, y) => x > y), min = best((x, y) => x < y);
+  const mean = f0 + parts.reduce((s, p) => s + p.reduce((t, x) => t + x.d, 0) / p.length, 0);
+
+  it("os grupos cobrem todas as perguntas, e as de fora não mexem na pegada", () => {
+    expect([...GROUPS.flat(), ...FORA].sort()).toEqual(CARBON_QUESTIONS.map((q) => q.id).sort());
+    for (const id of FORA) for (const o of [1, 2, 3]) expect(ecologicalGha({ ...ana, [id]: o })).toBe(ecologicalGha(ana));
+  });
+  it("a pegada é a soma das partes de cada grupo", () => {
+    const bySum = (a: Record<string, number>) => f0 + GROUPS.reduce((s, g) => s + ecologicalGha({ ...zero, ...Object.fromEntries(g.map((id) => [id, a[id]!])) }) - f0, 0);
+    for (const a of [ana, allC(1), allC(2), allC(3), max, min]) expect(ecologicalGha(a)).toBeCloseTo(bySum(a), 3);
+  });
+  it("maior: 4,92 gha e 2,96 Terras (tudo D, mas 1 a 2 moradores e banho a gás)", () => {
+    expect(max).toMatchObject({ ...allC(3), q0: 0, q10b: 1, q5: expect.any(Number), q18: expect.any(Number) });
+    expect(computeEcological(max)).toMatchObject({ gha: 4.92, planets: 2.96 });
+    expect(computeEcological(allC(3)).gha).toBeLessThan(computeEcological(max).gha);
+  });
+  it("menor: 1,02 gha e 0,61 Terra (tudo A, mas 5 ou mais moradores e banho frio)", () => {
+    expect(computeEcological(min)).toMatchObject({ gha: 1.02, planets: 0.61 });
+    expect(computeEcological({ ...zero, q0: 3, q10b: 3 }).gha).toBe(1.02);
+    expect(computeEcological(zero).gha).toBeGreaterThan(computeEcological(min).gha);
+  });
+  it("média de todas as combinações: 2,25 gha e 1,35 Terra", () => {
+    expect(mean).toBeCloseTo(2.25, 2);
+    expect(mean / BIOCAP_MUNDIAL).toBeCloseTo(1.35, 2);
+  });
+  it("Ana e a média do Brasil ficam entre o menor e o maior", () => {
+    for (const g of [ecologicalGha(ana), PEGADA_BRASIL]) {
+      expect(g).toBeGreaterThan(ecologicalGha(min));
+      expect(g).toBeLessThan(ecologicalGha(max));
+    }
   });
 });
 
