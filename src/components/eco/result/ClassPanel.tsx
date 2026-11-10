@@ -1,6 +1,6 @@
 import { STAGE_COLOR } from "@/components/eco/FootprintChart";
 import { CLASS_SIZE, formatKg, nf, STAGE_LABEL, type CarbonBreakdown, type Stage } from "@/lib/carbon";
-import { MIN_CLASS_K, type ClassAggregate } from "@/lib/footprint";
+import { formatTerras, MIN_CLASS_K, type ClassAggregate } from "@/lib/footprint";
 import { StatCard } from "./StatCard";
 
 type Props = { total: number; breakdown: CarbonBreakdown; planets: number; cls: ClassAggregate };
@@ -12,7 +12,7 @@ export function ClassPanel({ total, breakdown, planets, cls }: Props) {
     <section className="space-y-5 rounded-3xl bg-card p-6 shadow-soft">
       <div>
         <h2 className="text-xl font-bold">👥 Eu × turma</h2>
-        <p className="text-sm text-muted-foreground">A turma real é a soma de todo mundo que respondeu. Ninguém vê o resultado de cada colega, só o total e a sua parte.</p>
+        <p className="text-sm text-muted-foreground">A turma real é a soma de todo mundo que respondeu. Ninguém vê o resultado de cada colega, só o total e a sua parte. Nas barras, “Turma” é a média por aluno.</p>
       </div>
       {cls.k === 0 ? (
         <>
@@ -29,15 +29,15 @@ export function ClassPanel({ total, breakdown, planets, cls }: Props) {
           <StatCard label="Média da turma" value={`${nf(cls.avg, 0)} kg`} sub="por aluno, por ano" />
           <StatCard label="Minha parte" value={`${nf(cls.sum ? (total / cls.sum) * 100 : 0, 1)}%`} sub="da soma da turma" />
           <StatCard label="Eu × média" value={`${dif >= 0 ? "+" : "−"}${nf(Math.abs(dif), 0)} kg`} sub={dif >= 0 ? "acima da média da turma" : "abaixo da média da turma"} />
-          {cls.k < CLASS_SIZE && <StatCard label="Turma completa estimada" value={formatKg(cls.avg * CLASS_SIZE)} sub={`${cls.k} ${cls.k === 1 ? "resposta" : "respostas"} × ${CLASS_SIZE} ÷ ${cls.k}`} />}
+          {cls.k < CLASS_SIZE && <StatCard label="Turma completa estimada" value={formatKg(cls.avg * CLASS_SIZE)} sub={`média × ${CLASS_SIZE} alunos`} />}
         </div>
         <p className="rounded-2xl bg-muted p-4">
-          Em Terras: você precisaria de <b>{nf(planets, 1)}</b>, e a média da turma é <b>{nf(cls.avgPlanets, 1)}</b>.
+          Em Terras: você, <b>{formatTerras(planets)}</b>; a média da turma, <b>{formatTerras(cls.avgPlanets)}</b>.
         </p>
         <div className="space-y-3">
           {stages.map((s) => {
             const max = Math.max(breakdown[s], cls.avgStages[s]) || 1;
-            const lines: [string, number, number][] = [["Você", breakdown[s], 1], ["Média", cls.avgStages[s], 0.55]];
+            const lines: [string, number, number][] = [["Você", breakdown[s], 1], ["Turma", cls.avgStages[s], 0.55]];
             return (
               <div key={s}>
                 <p className="text-sm font-semibold">{STAGE_LABEL[s]}</p>

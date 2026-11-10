@@ -12,15 +12,15 @@ export type CQuestion = { id: string; emoji: string; stage: Stage | "contexto"; 
 export const CARBON_QUESTIONS: CQuestion[] = [
   { id: "q0", emoji: "🏠", stage: "contexto", text: "Quantas pessoas moram na sua casa, com você?", options: ["1 a 2", "3", "4", "5 ou mais"], note: "Os gastos da casa são divididos entre os moradores." },
   { id: "q1", emoji: "🥩", stage: "alimentacao", text: "Em quantos dias da semana você come carne de boi?", options: ["0 a 1 dia", "2 a 3 dias", "4 a 5 dias", "Todo dia, em várias refeições"] },
-  { id: "q2", emoji: "🍗", stage: "alimentacao", text: "Em quantos dias você come frango, porco ou peixe?", options: ["0 a 1 dia", "2 a 3 dias", "4 a 5 dias", "Todo dia, em várias refeições"] },
+  { id: "q2", emoji: "🍗", stage: "alimentacao", text: "Em quantos dias da semana você come frango, porco ou peixe?", options: ["0 a 1 dia", "2 a 3 dias", "4 a 5 dias", "Todo dia, em várias refeições"] },
   { id: "q3", emoji: "🥛", stage: "alimentacao", text: "Com que frequência você toma leite ou come queijo e iogurte?", options: ["Raramente", "Algumas vezes por semana", "1 vez por dia", "Várias vezes por dia"] },
-  { id: "q4", emoji: "🍟", stage: "alimentacao", text: "Quanto da sua alimentação vem de ultraprocessados?", options: ["Quase nada", "Um pouco", "Metade", "A maior parte"] },
+  { id: "q4", emoji: "🍟", stage: "alimentacao", text: "Quanto da sua alimentação vem de ultraprocessados?", options: ["Quase nada", "Um pouco", "Metade", "A maior parte"], note: "Ultraprocessados são comidas prontas de fábrica, como salgadinho, refrigerante, biscoito recheado, nuggets e macarrão instantâneo." },
   { id: "q5", emoji: "🥦", stage: "contexto", text: "De onde vêm as frutas e verduras da sua casa?", options: ["Horta ou feira local", "Mercado, da época", "Mercado, sem reparar", "Quase não comemos"], note: "Esta pergunta é para debate: o transporte do alimento pesa menos de 5% da pegada da comida." },
   { id: "q6", emoji: "🍽️", stage: "alimentacao", text: "Quanta comida costuma sobrar no seu prato?", options: ["Quase nunca sobra", "Às vezes sobra", "Sobra com frequência", "Sobra bastante"] },
   { id: "q7", emoji: "🚌", stage: "transporte", text: "Como você vai para a escola?", options: ["A pé ou de bicicleta", "Ônibus ou van", "Carona dividida", "Carro só para você"] },
   { id: "q7b", emoji: "📏", stage: "transporte", text: "Qual a distância da sua casa até a escola?", options: ["Até 1 km", "1 a 3 km", "3 a 7 km", "Mais de 7 km"] },
   { id: "q8", emoji: "🚗", stage: "transporte", text: "Nos fins de semana e passeios, quanto a família anda de carro?", options: ["Quase nada", "Passeios na cidade", "Viagens a cidades vizinhas", "Viagens longas com frequência"] },
-  { id: "q9", emoji: "✈️", stage: "aviacao", text: "Quantas viagens de avião você fez nos últimos 12 meses?", options: ["Nenhuma", "1 nacional", "2 a 3 nacionais", "Internacional ou 4 ou mais"] },
+  { id: "q9", emoji: "✈️", stage: "aviacao", text: "Quantas viagens de avião você fez nos últimos 12 meses?", options: ["Nenhuma", "1 nacional", "2 a 3 nacionais", "Alguma internacional, ou 4 ou mais nacionais"] },
   { id: "q10", emoji: "🚿", stage: "energia", text: "Quanto tempo dura o seu banho?", options: ["Até 5 minutos", "5 a 10 minutos", "10 a 20 minutos", "Mais de 20 minutos"] },
   { id: "q10b", emoji: "🔥", stage: "energia", text: "Como a água do seu banho é aquecida?", options: ["Chuveiro elétrico", "Aquecedor a gás", "Aquecedor solar", "Tomo banho frio"] },
   { id: "q11", emoji: "❄️", stage: "energia", text: "Vocês usam ar-condicionado ou aquecedor elétrico?", options: ["Quase nunca", "Só ventilador", "Às vezes", "Todo dia"] },
@@ -92,12 +92,13 @@ export function timeEquivalent(celebKg: number, yearlyKg: number): string {
   return `${(years * 365).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} dias`;
 }
 
-// SEEG 2025, por habitante (kg CO2e/ano).
+// SEEG 14 (out. 2026, dados de 2025), por habitante (kg CO2e/ano).
 export const BRASIL = { agro: 2935, usoTerra: 3816, energia: 2000, residuos: 449, industria: 442, bruto: 9642, remocoes: 3056 };
 export const CLASS_SIZE = 30;
-// SEEG 2025, totais em t CO2e. Os valores por habitante acima vêm destes, com a população abaixo.
+// SEEG 14 (dados de 2025), totais em t CO2e. Os valores por habitante acima vêm destes, com a população abaixo.
 export const SEEG = {
-  pop: 213.4e6,
+  pop: 213.4e6, // ⚠️ confirmar no IBGE
+
   setores: [
     { nome: "Mudança de uso da terra e floresta", t: 814_269_171 },
     { nome: "Agropecuária", t: 626_251_312 },
@@ -129,7 +130,7 @@ export type Celeb = { id: string; nome: string; eventos: CelebEvent[] };
 export const CELEBS: Celeb[] = [
   { id: "neymar", nome: "Neymar", eventos: [
     { id: "heli", rotulo: "Helicóptero para o treino", desc: "1 trecho de helicóptero Mangaratiba → Santos", E: 620, horas: 1, freq: 4, unidade: "trechos", fonte: "UOL Ecoa, 6 fev. 2025 (estimativa de pesquisador). Tempo de voo aproximado." },
-    { id: "b747", rotulo: "Boeing 747 sozinho", desc: "1 viagem sozinho num Boeing 747 até a Arábia Saudita", E: 230000, unico: true, fonte: "Reportagem de 2023, fonte original a confirmar. Tempo de voo não informado." },
+    { id: "b747", rotulo: "Boeing 747 sozinho", desc: "1 viagem sozinho num Boeing 747 até a Arábia Saudita", E: 230000, unico: true, fonte: "Reportagem de 2023 (a fonte original dos números não foi identificada). Tempo de voo não informado." },
   ] },
   { id: "virginia", nome: "Virginia Fonseca", eventos: [
     { id: "bv", rotulo: "Bate-volta para treinar", desc: "1 bate-volta de jatinho São Paulo → Goiás para treinar na academia", E: 6249.6, horas: 2.667, freq: 4, unidade: "bate-voltas", fonte: "Cessna Citation Sovereign: 930 L/h × 2,667 h = 2.480 L de querosene × 2,52 kg CO₂/L. O mesmo texto cita 6,7 t; usamos o valor com cálculo." },
@@ -147,7 +148,7 @@ export const CELEBS: Celeb[] = [
     { id: "y", desc: "150 voos de jatinho de janeiro a novembro de 2023", E: 4564700, dias: 334, fonte: "Ranking de jatos particulares, jan–nov 2023. Outra lista (2025–2026) cita 5.705 t, uma aeronave." },
   ] },
   { id: "alok", nome: "Alok", eventos: [
-    { id: "y", desc: "36 voos em 2023", E: 29300, dias: 365, fonte: "Ranking de influenciadores 2023. O valor por km é baixo para jatinho; a metodologia precisa ser confirmada." },
+    { id: "y", desc: "36 voos em 2023", E: 29300, dias: 365, fonte: "Ranking de influenciadores 2023. O valor por km parece baixo para um jatinho, então a emissão real pode ser maior." },
   ] },
   { id: "taylor", nome: "Taylor Swift", eventos: [
     { id: "y", desc: "170 voos do jato dela entre 1º de janeiro e 19 de julho de 2022", E: 8293540, dias: 200, horas: 382.05, fonte: "Yard (2022), com dados do perfil @CelebJets. A equipe dela afirma que o jato era emprestado a outras pessoas." },
@@ -246,8 +247,8 @@ export function compareCeleb(nome: string, ev: CelebEvent, period: CelebPeriod, 
     cards.push({ q: `Quanto tempo ${who.quemObj} leva para emitir 1 hora de voo de ${nome}?`, a: durationText(perHour / perDay), calc: `${nf(perHour, 0)} kg por hora de voo ÷ ${nf(perDay, 1)} kg/dia` });
     cards.push({ q: `Em quanto tempo de voo ${nome} emite ${who.seu}?`, a: durationText(perDay / perHour / 24), calc: `${nf(perDay, 1)} kg ÷ ${nf(perHour, 0)} kg/h` });
   }
-  if (who.aviacao > 0) cards.push({ q: `Só voos com voos: quantos anos de voos ${grupo === "eu" ? "seus" : "desse grupo"} cabem nisso?`, a: `${nf(emitted / who.aviacao, emitted / who.aviacao < 10 ? 1 : 0)} anos`, calc: `${formatKg(emitted)} ÷ ${nf(who.aviacao, 0)} kg/ano de aviação` });
-  else cards.push({ q: "Só voos com voos", a: "0 kg de avião", calc: grupo === "eu" ? "Você não voou nos últimos 12 meses. Essa é a comparação de mesmo recorte (ISO 14067, Anexo B)." : "Ninguém voou nesse grupo." });
+  if (who.aviacao > 0) cards.push({ q: `Comparando só voos: quantos anos de voos ${grupo === "eu" ? "seus" : "desse grupo"} cabem nisso?`, a: `${nf(emitted / who.aviacao, emitted / who.aviacao < 10 ? 1 : 0)} anos`, calc: `${formatKg(emitted)} ÷ ${nf(who.aviacao, 0)} kg/ano de aviação` });
+  else cards.push({ q: "Comparando só voos", a: "0 kg de avião", calc: grupo === "eu" ? `Você não voou nos últimos 12 meses, então não há voos seus para comparar com os de ${nome}.` : "Ninguém voou nesse grupo." });
 
   return { kind: "ok", before: `${who.quem} levaria `, highlight: durationText(time), after: ` para emitir o que ${nome} emite ${perText}.`, cards, notes };
 }

@@ -9,18 +9,19 @@ export function ScorePanel({ total, breakdown, planets }: { total: number; break
     <section className="space-y-5 rounded-3xl bg-card p-6 shadow-soft">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col justify-center rounded-2xl bg-hero p-5 text-center text-primary-foreground">
-          <p className="font-semibold opacity-90">Sua pegada de carbono em 1 ano</p>
+          <p className="font-semibold opacity-90">Sua pegada de carbono</p>
           <p className="font-display text-5xl font-extrabold">{nf(total / 1000, 2)}</p>
-          <p className="opacity-90">t CO₂e por ano</p>
+          <p className="opacity-90">toneladas de CO₂e por ano</p>
         </div>
         <div className="rounded-2xl bg-muted p-5 text-center">
           <p className="mb-2 font-semibold text-muted-foreground">Sua pegada ecológica</p>
           <Planets value={planets} size="sm" />
         </div>
       </div>
-      <div className="text-sm">
+      <div className="space-y-1 text-sm">
         <p className="text-muted-foreground">{nf(total, 0)} kg por ano · {nf(total / 365, 1)} kg por dia</p>
-        <p>É como um carro rodando {nf(car.km, 0)} km, ou {nf(car.laps, 1)} voltas na Terra.</p>
+        <p>É como um carro rodando {nf(car.km, 0)} km, ou {nf(car.laps, 1)} voltas ao redor da Terra.</p>
+        <p className="text-muted-foreground">CO₂e (CO₂ equivalente) junta todos os gases que esquentam o planeta, como o gás carbônico e o metano, numa medida só.</p>
       </div>
       <div>
         <h2 className="mb-2 text-xl font-bold">De onde vem</h2>
@@ -38,7 +39,7 @@ export function ScorePanel({ total, breakdown, planets }: { total: number; break
           ))}
         </ul>
       </div>
-      <p className="text-xs text-muted-foreground">É uma estimativa, não uma medição exata. O avião aparece separado, como pede a norma ISO 14067.</p>
+      <p className="text-xs text-muted-foreground">É uma estimativa, não uma medição exata. O avião aparece separado do transporte, como pedem as regras internacionais desse tipo de cálculo (norma ISO 14067).</p>
     </section>
   );
 }

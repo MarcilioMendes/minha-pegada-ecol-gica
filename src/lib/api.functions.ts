@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { PERCEPTION_QUESTIONS, AREA_LABEL, computeEcological, aggregateClass, shareableClass, type EcoResult } from "./footprint";
+import { PERCEPTION_QUESTIONS, AREA_LABEL, computeEcological, formatTerras, aggregateClass, shareableClass, type EcoResult } from "./footprint";
 import { computeCarbon, CARBON_QUESTIONS, STAGE_LABEL, topKey, type CarbonBreakdown } from "./carbon";
 
 const db = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
@@ -14,7 +14,7 @@ export const studentLogin = createServerFn({ method: "POST" })
     const s = await sess();
     const sb = await db();
     const { data: st } = await sb.from("students").select("*").eq("pseudonym", pseudonym).maybeSingle();
-    if (!st) throw new Error("Pseudônimo não encontrado. Confira com seu professor.");
+    if (!st) throw new Error("Código não encontrado. Confira com o professor.");
     const h = await s.hashPin(pseudonym, data.pin);
     let firstAccess = false;
     if (!st.pin_hash) {
@@ -74,7 +74,7 @@ Estrutura obrigatória em Markdown:
 ## 🎯 Suas missões
 (2 a 3 missões práticas, realistas e específicas para o cotidiano de um adolescente, em lista numerada)
 Máximo de ~250 palavras.`;
-  const input = `REFLEXÃO DO ALUNO:\n${refl}\n\nHÁBITOS:\n${habits}\n\nRESULTADO: ${total} kg CO₂e/ano. Pegada ecológica: ${eco.planets} Terras (${eco.gha} gha). Etapa de maior impacto: ${STAGE_LABEL[topKey(breakdown)]}. Área de maior impacto: ${AREA_LABEL[topKey(eco.byArea)]}.`;
+  const input = `REFLEXÃO DO ALUNO:\n${refl}\n\nHÁBITOS:\n${habits}\n\nRESULTADO: ${total} kg CO₂e/ano. Pegada ecológica: ${formatTerras(eco.planets)} (${eco.gha} gha). Etapa de maior impacto: ${STAGE_LABEL[topKey(breakdown)]}. Área de maior impacto: ${AREA_LABEL[topKey(eco.byArea)]}.`;
   try {
     const res = await generateResponse({ model: "openai/gpt-6-astra", instructions, input });
     return extractText(res).trim() || null;
@@ -93,7 +93,7 @@ export const submitPhase = createServerFn({ method: "POST" })
     const sb = await db();
     if (data.phase === "post") {
       const { data: pre } = await sb.from("responses").select("id").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
-      if (!pre) throw new Error("Faça primeiro a Percepção Ambiental.");
+      if (!pre) throw new Error("Faça primeiro a etapa 1, Minha reflexão.");
     }
     const { data: cur } = await sb.from("responses").select("perception,answers,ai_feedback").eq("student_id", c.sid).eq("phase", data.phase).maybeSingle();
     const unchanged = !!cur && JSON.stringify(perceptionItems(cur.perception)) === JSON.stringify(perception);
@@ -197,7 +197,7 @@ export const submitCarbon = createServerFn({ method: "POST" })
     const { total, breakdown } = computeCarbon(answers);
     const sb = await db();
     const { data: pre } = await sb.from("responses").select("id,perception").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
-    if (!pre) throw new Error("Faça primeiro a Percepção Ambiental.");
+    if (!pre) throw new Error("Faça primeiro a etapa 1, Minha reflexão.");
     const { error } = await sb.from("carbon_responses").upsert(
       { student_id: c.sid, answers, total_kg: total, breakdown, updated_at: new Date().toISOString() }, { onConflict: "student_id" });
     if (error) throw new Error("Não foi possível salvar. Tente de novo.");

@@ -31,7 +31,7 @@ export function Questionnaire({ phase, initialPerception, previousPerception, on
       )}
       <div className="space-y-2">
         <div className="flex justify-between text-sm font-semibold text-muted-foreground">
-          <span>Percepção Ambiental</span>
+          <span>Etapa 1 · Minha reflexão</span>
           <span>{step + 1} / {steps}</span>
         </div>
         <Progress value={((step + 1) / steps) * 100} />
@@ -52,6 +52,7 @@ export function Questionnaire({ phase, initialPerception, previousPerception, on
           placeholder="Escreva com suas palavras... não existe resposta errada 💚"
           className="rounded-2xl text-base"
         />
+        {!canNext && <p className="mt-2 text-sm text-muted-foreground">Escreva pelo menos uma palavra para continuar.</p>}
       </div>
 
       <div className="flex justify-between">

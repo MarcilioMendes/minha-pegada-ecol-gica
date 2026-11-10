@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeEcological, ecologicalGha, aggregateClass, shareableClass, GHA_PER_T_CO2, BASE_GHA, BIOCAP_MUNDIAL, PEGADA_BRASIL, TERRAS_BRASIL, TERRAS_MUNDO } from "./footprint";
+import { computeEcological, ecologicalGha, formatTerras, aggregateClass, shareableClass, GHA_PER_T_CO2, BASE_GHA, BIOCAP_MUNDIAL, PEGADA_BRASIL, TERRAS_BRASIL, TERRAS_MUNDO } from "./footprint";
 import { CARBON_QUESTIONS, computeCarbon, topKey } from "./carbon";
 
 // Exemplo resolvido da "Ana" (mesmo de carbon.test.ts).
@@ -80,6 +80,13 @@ describe("maior, menor e média possíveis (todas as 4^21 combinações)", () =>
       expect(g).toBeLessThan(ecologicalGha(max));
     }
   });
+});
+
+describe("formatTerras", () => {
+  it("usa vírgula e singular abaixo de 2", () => expect(formatTerras(0.85)).toBe("0,9 Terra"));
+  it("usa plural a partir de 2", () => expect(formatTerras(2.63)).toBe("2,6 Terras"));
+  it("o plural segue o número arredondado da tela", () => expect(formatTerras(1.97)).toBe("2,0 Terras"));
+  it("aceita mais casas", () => expect(formatTerras(1.6871, 2)).toBe("1,69 Terra"));
 });
 
 describe("aggregateClass", () => {

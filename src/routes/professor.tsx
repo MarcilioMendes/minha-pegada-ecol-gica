@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin, teacherCarbon } from "@/lib/api.functions";
-import { AREA_LABEL, PERCEPTION_QUESTIONS, aggregateClass, type Area } from "@/lib/footprint";
+import { AREA_LABEL, PERCEPTION_QUESTIONS, aggregateClass, formatTerras, type Area } from "@/lib/footprint";
 import { Planets, FootprintDonut, AREA_COLOR } from "@/components/eco/FootprintChart";
-import { formatKg, STAGE_LABEL, CARBON_QUESTIONS, CELEBS, topKey, type Stage } from "@/lib/carbon";
+import { BRASIL, formatKg, nf, STAGE_LABEL, CARBON_QUESTIONS, CELEBS, topKey, type Stage } from "@/lib/carbon";
 import { Feedback } from "@/components/eco/Feedback";
 import { csvCell } from "@/lib/csv";
 import { Download, LogOut, UserPlus, Check, Minus } from "lucide-react";
@@ -119,7 +119,7 @@ function Professor() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Responderam percepção" value={`${stats.pre.length}/${data.students.length}`} />
           <Stat label="Responderam calculadora" value={`${stats.cls.k}/${data.students.length}`} />
-          <Stat label="Média de Terras" value={stats.cls.k ? stats.cls.avgPlanets.toFixed(1) : "—"} />
+          <Stat label="Média de Terras" value={stats.cls.k ? formatTerras(stats.cls.avgPlanets) : "—"} />
           <Stat label="Etapa de maior impacto" value={stats.top ? STAGE_LABEL[stats.top] : "—"} />
         </div>
 
@@ -129,7 +129,7 @@ function Professor() {
           return (
             <div className="space-y-3 rounded-3xl bg-card p-6 shadow-soft">
               <h2 className="text-xl font-bold">🌎 Calculadora de carbono · {carbon.length} resposta(s)</h2>
-              <p>Turma: <b>{formatKg(sum)}</b> CO₂e/ano · média <b>{formatKg(sum / carbon.length)}</b> por aluno · equivale a {(sum / 9642).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} brasileiros médios.</p>
+              <p>Turma: <b>{formatKg(sum)}</b> CO₂e/ano · média <b>{formatKg(sum / carbon.length)}</b> por aluno · equivale a {nf(sum / BRASIL.bruto, 1)} brasileiros médios.</p>
               <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
                 {st.map((k) => <div key={k} className="rounded-xl bg-muted p-3 text-sm"><p className="font-semibold">{STAGE_LABEL[k]}</p><p>{formatKg(carbon.reduce((a, c) => a + c.breakdown[k], 0) / carbon.length)}</p></div>)}
               </div>
@@ -162,7 +162,7 @@ function Professor() {
                       <td className="p-3">{pre ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{c ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{c ? formatKg(c.total) : "—"}</td>
-                      <td className="p-3">{c ? c.eco.planets.toFixed(1) : "—"}</td>
+                      <td className="p-3">{c ? nf(c.eco.planets, 1) : "—"}</td>
                       <td className="p-3">{(pre || s.seedPerception || c) && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
                     </tr>
                   );
