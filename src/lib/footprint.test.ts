@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeEcological, aggregateClass, shareableClass, GHA_PER_T_CO2, BASE_GHA } from "./footprint";
+import { computeEcological, aggregateClass, shareableClass, GHA_PER_T_CO2, BASE_GHA, BIOCAP_MUNDIAL, PEGADA_BRASIL, TERRAS_BRASIL, TERRAS_MUNDO } from "./footprint";
 import { CARBON_QUESTIONS, computeCarbon, topKey } from "./carbon";
 
 // Exemplo resolvido da "Ana" (mesmo de carbon.test.ts).
@@ -13,10 +13,16 @@ const sum = (o: Record<string, number>) => Object.values(o).reduce((s, v) => s +
 describe("computeEcological", () => {
   it("1 t de CO₂ fóssil ≈ 0,339 gha (Eq. 14)", () => expect(GHA_PER_T_CO2).toBeCloseTo(0.339, 3));
   it("base compartilhada ≈ 0,77 gha", () => expect(BASE_GHA).toBe(0.77));
-  it("Ana: ≈ 1,41 gha e ≈ 0,94 Terra", () => {
+  it("Ana: ≈ 1,41 gha e ≈ 0,85 Terra", () => {
     const r = computeEcological(ana);
     expect(r.gha).toBeCloseTo(1.41, 2);
-    expect(r.planets).toBeCloseTo(0.94, 2);
+    expect(r.planets).toBeCloseTo(0.85, 2);
+  });
+  it("Dia da Sobrecarga 2024: Brasil ≈ 1,69 Terra, mundo ≈ 1,71, biocapacidade ≈ 1,66 gha", () => {
+    expect(TERRAS_BRASIL).toBeCloseTo(1.69, 2);
+    expect(TERRAS_MUNDO).toBeCloseTo(1.71, 2);
+    expect(BIOCAP_MUNDIAL).toBeCloseTo(1.66, 2);
+    expect(PEGADA_BRASIL / BIOCAP_MUNDIAL).toBeCloseTo(TERRAS_BRASIL, 10);
   });
   it("tudo A < tudo D", () => expect(computeEcological(allC(0)).gha).toBeLessThan(computeEcological(allC(3)).gha));
   it("soma por área = soma por etapa = gha", () => {

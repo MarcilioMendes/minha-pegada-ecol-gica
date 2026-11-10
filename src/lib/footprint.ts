@@ -43,10 +43,16 @@ const DAIRY_M2_PER_KG_CO2E = { cultivo: 4.2 / 3.15, pastagem: 4.7 / 3.15 };
 // Base de 400 kg CO₂e (arroz, feijão, vegetais): estimativa entre trigo (≈1,7) e arroz (≈0,6).
 const BASE_DIET_M2_PER_KG_CO2E = 1.5;
 
-// Referências por pessoa (gha). ⚠️ Confirmar numa mesma edição do Ecological Footprint Explorer da GFN.
-export const BIOCAP_MUNDIAL = 1.5;
+// Referências por pessoa. Relatório Anual WWF-Brasil 2024 (p. 60–61): o Dia da Sobrecarga da Terra
+// caiu em 1º de agosto no mundo (dia 214 de 366) e em 4 de agosto no Brasil (dia 217).
+// Terras = dias do ano ÷ dia da sobrecarga (estimativa nossa; o relatório não traz gha).
+export const TERRAS_BRASIL = 366 / 217; // ≈ 1,69
+export const TERRAS_MUNDO = 366 / 214;  // ≈ 1,71
+// Pegada média do Brasil em gha: GFN, dados de 2017 ("Ecobytes: Beef and Brazil's declining biocapacity", 2021).
 export const PEGADA_BRASIL = 2.8;
-export const PEGADA_MUNDIAL = 2.5;
+// Biocapacidade tirada da razão de 2024, para que a média do Brasil dê TERRAS_BRASIL: ≈ 1,66 gha.
+export const BIOCAP_MUNDIAL = PEGADA_BRASIL / TERRAS_BRASIL;
+export const PEGADA_MUNDIAL = TERRAS_MUNDO * BIOCAP_MUNDIAL; // ≈ 2,84 gha
 
 // Base compartilhada: governo (0,47) + formação de capital (1,23) = 1,70 de 6,18 gha (27,5%)
 // no CLUM da Califórnia (Tabela 1), aplicado à pegada média do Brasil.
