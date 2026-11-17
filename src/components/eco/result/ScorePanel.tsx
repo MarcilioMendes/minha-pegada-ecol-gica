@@ -11,7 +11,7 @@ export function ScorePanel({ total, breakdown, planets }: { total: number; break
         <div className="flex flex-col justify-center rounded-2xl bg-hero p-5 text-center text-primary-foreground">
           <p className="font-semibold opacity-90">Sua pegada de carbono</p>
           <p className="font-display text-5xl font-extrabold">{nf(total / 1000, 2)}</p>
-          <p className="opacity-90">toneladas de CO₂e por ano</p>
+          <p className="opacity-90">toneladas por ano de gases que esquentam o planeta</p>
         </div>
         <div className="rounded-2xl bg-muted p-5 text-center">
           <p className="mb-2 font-semibold text-muted-foreground">Sua pegada ecológica</p>
@@ -19,9 +19,9 @@ export function ScorePanel({ total, breakdown, planets }: { total: number; break
         </div>
       </div>
       <div className="space-y-1 text-sm">
-        <p className="text-muted-foreground">{nf(total, 0)} kg por ano · {nf(total / 365, 1)} kg por dia</p>
-        <p>É como um carro rodando {nf(car.km, 0)} km, ou {nf(car.laps, 1)} voltas ao redor da Terra.</p>
-        <p className="text-muted-foreground">CO₂e (CO₂ equivalente) junta todos os gases que esquentam o planeta, como o gás carbônico e o metano, numa medida só.</p>
+        <p className="text-muted-foreground">São {nf(total, 0)} quilos por ano, ou {nf(total / 365, 1)} quilos por dia. (1 tonelada = 1.000 quilos.)</p>
+        <p>É o mesmo que um carro solta rodando {nf(car.km, 0)} km, ou {nf(car.laps, 1)} voltas ao redor da Terra.</p>
+        <p className="text-muted-foreground">Pegada de carbono é a quantidade de gases que esquentam o planeta (como o gás carbônico e o metano) que os seus hábitos soltam no ar. A sigla CO₂e quer dizer que todos esses gases foram somados numa medida só.</p>
       </div>
       <div>
         <h2 className="mb-2 text-xl font-bold">De onde vem</h2>
@@ -39,7 +39,7 @@ export function ScorePanel({ total, breakdown, planets }: { total: number; break
           ))}
         </ul>
       </div>
-      <p className="text-xs text-muted-foreground">É uma estimativa, não uma medição exata. O avião aparece separado do transporte, como pedem as regras internacionais desse tipo de cálculo (norma ISO 14067).</p>
+      <p className="text-xs text-muted-foreground">É uma estimativa, não uma medida exata. O avião aparece separado do transporte, como manda a regra internacional desse tipo de cálculo (norma ISO 14067).</p>
     </section>
   );
 }

@@ -31,7 +31,7 @@ export function Questionnaire({ phase, initialPerception, previousPerception, on
       )}
       <div className="space-y-2">
         <div className="flex justify-between text-sm font-semibold text-muted-foreground">
-          <span>Etapa 1 · Minha reflexão</span>
+          <span>{phase === "post" ? "Etapa 3 · Minha reflexão, de novo" : "Etapa 1 · Minha reflexão"}</span>
           <span>{step + 1} / {steps}</span>
         </div>
         <Progress value={((step + 1) / steps) * 100} />
@@ -39,12 +39,12 @@ export function Questionnaire({ phase, initialPerception, previousPerception, on
 
       <div key={step} className="animate-in fade-in slide-in-from-right-4 rounded-3xl bg-card p-6 shadow-soft sm:p-8">
         <Leaf className="mb-3 h-8 w-8 text-primary" />
-        <h2 className="mb-4 text-2xl font-bold">{PERCEPTION_QUESTIONS[step]}</h2>
         {phase === "post" && previousPerception?.[step] && (
           <p className="mb-3 rounded-xl bg-secondary p-3 text-sm text-secondary-foreground">
-            <b>Antes você escreveu:</b> “{previousPerception[step]}”. Depois da aula, o que mudou no seu jeito de pensar?
+            Na etapa 1 você escreveu: “{previousPerception[step]}”. Agora que você viu a sua pegada, o que você responderia?
           </p>
         )}
+        <h2 className="mb-4 text-2xl font-bold">{PERCEPTION_QUESTIONS[step]}</h2>
         <Textarea
           rows={5}
           value={perception[step]}

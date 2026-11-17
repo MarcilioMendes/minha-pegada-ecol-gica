@@ -5,7 +5,7 @@ import { AREA_LABEL, BIOCAP_MUNDIAL, formatTerras, PEGADA_BRASIL, type EcoResult
 export function EcoPanel({ eco }: { eco: EcoResult }) {
   const rows: [string, number, number, string][] = [
     ["Você", eco.gha, eco.planets, "bg-primary"],
-    ["O que o planeta consegue repor por pessoa", BIOCAP_MUNDIAL, 1, "bg-muted-foreground"],
+    ["O que a Terra consegue repor por pessoa", BIOCAP_MUNDIAL, 1, "bg-muted-foreground"],
     ["Média do Brasil", PEGADA_BRASIL, PEGADA_BRASIL / BIOCAP_MUNDIAL, "bg-muted-foreground"],
   ];
   const max = Math.max(...rows.map(([, v]) => v));
@@ -16,7 +16,7 @@ export function EcoPanel({ eco }: { eco: EcoResult }) {
         Se todos vivessem como você, precisaríamos de <b className="text-primary">{formatTerras(eco.planets)}</b>.
       </p>
       <p className="text-sm text-muted-foreground">
-        A pegada ecológica é medida em hectares globais (gha): a área de planeta necessária para produzir o que você consome e para absorver o CO₂ da queima de combustíveis, como gasolina, gás e carvão.
+        A pegada ecológica mede quanta área do planeta é usada para produzir a sua comida e as suas coisas, e quanta floresta seria preciso para absorver a fumaça de gasolina, gás e carvão. A unidade é o hectare global (gha): um pedaço de terra um pouco maior que um campo de futebol.
       </p>
       <FootprintDonut data={eco.byArea} labels={AREA_LABEL} colors={AREA_COLOR} unit="gha" />
       <div className="space-y-2">
@@ -28,13 +28,13 @@ export function EcoPanel({ eco }: { eco: EcoResult }) {
         ))}
       </div>
       <p className="text-sm text-muted-foreground">
-        A média do Brasil inclui todo o consumo do país. Esta calculadora pergunta só sobre uma parte dele (comida, transporte, voos, energia em casa e algumas compras), por isso o seu resultado tende a ficar abaixo da média, mesmo com hábitos parecidos com os da maioria.
+        A média do Brasil conta tudo o que o país consome. Esta calculadora pergunta só sobre uma parte: comida, transporte, voos, energia em casa e algumas compras. Por isso, o seu resultado costuma ficar abaixo da média, mesmo com hábitos parecidos com os da maioria.
       </p>
       <p className="text-xs text-muted-foreground">
         Fonte da média do Brasil: Relatório Anual WWF-Brasil 2024. Em 2024, o Dia da Sobrecarga da Terra caiu em 4 de agosto no Brasil: se todos vivessem como a média brasileira, os recursos do ano acabariam no 217º dia de 366, o que dá cerca de 1,69 Terra.
       </p>
       <p className="text-xs text-muted-foreground">
-        A pegada ecológica inclui uma parte fixa, igual para todos, pelo que o país usa em conjunto (governo, escolas, estradas). A pegada de carbono, no quadro de cima, não inclui. O peixe entra na mesma pergunta do frango e é contado como frango, por isso a pesca aparece zerada.
+        A pegada ecológica tem uma parte fixa, igual para todo mundo. É o que o país usa junto: governo, escolas e estradas. A pegada de carbono, no quadro de cima, não tem essa parte. O peixe está na mesma pergunta do frango e conta como frango. Por isso a pesca aparece zerada.
       </p>
     </section>
   );

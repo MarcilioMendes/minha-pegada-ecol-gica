@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin, teacherCarbon } from "@/lib/api.functions";
-import { AREA_LABEL, PERCEPTION_QUESTIONS, aggregateClass, formatTerras, type Area } from "@/lib/footprint";
-import { Planets, FootprintDonut, AREA_COLOR } from "@/components/eco/FootprintChart";
+import { AREA_LABEL, PERCEPTION_QUESTIONS, aggregateClass, shareableClass, formatTerras, type Area } from "@/lib/footprint";
+import { FootprintDonut, AREA_COLOR } from "@/components/eco/FootprintChart";
 import { BRASIL, formatKg, nf, STAGE_LABEL, CARBON_QUESTIONS, CELEBS, topKey, type Stage } from "@/lib/carbon";
 import { Feedback } from "@/components/eco/Feedback";
+import { CarbonResult } from "@/components/eco/Carbon";
 import { csvCell } from "@/lib/csv";
 import { Download, LogOut, UserPlus, Check, Minus } from "lucide-react";
 
@@ -55,22 +56,25 @@ function Professor() {
   const stats = useMemo(() => {
     if (!data) return null;
     const pre = data.responses.filter((r) => r.phase === "pre");
+    const post = data.responses.filter((r) => r.phase === "post");
     const cls = aggregateClass(carbon);
-    return { pre, cls, top: cls.k ? topKey(cls.avgStages) : null };
+    return { pre, post, cls, shared: shareableClass(cls), top: cls.k ? topKey(cls.avgStages) : null };
   }, [data, carbon]);
 
   function exportCsv() {
     if (!data) return;
     const stages = Object.keys(STAGE_LABEL) as Stage[];
     const areas = Object.keys(AREA_LABEL) as Area[];
-    const head = ["pseudonimo", "turma", ...PERCEPTION_QUESTIONS.map((_, i) => `percepcao_${i + 1}`), "co2_total_kg", ...stages.map((k) => STAGE_LABEL[k]), "gha", "terras", ...areas.map((k) => AREA_LABEL[k]), ...CARBON_QUESTIONS.map((q) => q.id.toUpperCase()), "feedback_ia"];
+    const head = ["pseudonimo", "turma", ...PERCEPTION_QUESTIONS.map((_, i) => `etapa1_p${i + 1}`), ...PERCEPTION_QUESTIONS.map((_, i) => `etapa3_p${i + 1}`), "co2_total_kg", ...stages.map((k) => STAGE_LABEL[k]), "gha", "terras", ...areas.map((k) => AREA_LABEL[k]), ...CARBON_QUESTIONS.map((q) => q.id.toUpperCase()), "feedback_ia"];
     const num = (v: number | undefined) => (v === undefined ? "" : String(v).replace(".", ","));
     const lines = [head.map(csvCell).join(";")];
     data.students.forEach((s) => {
       const pre = data.responses.find((r) => r.student_id === s.id && r.phase === "pre");
+      const post = data.responses.find((r) => r.student_id === s.id && r.phase === "post");
       const c = carbon.find((x) => x.student_id === s.id);
       lines.push([s.pseudonym, s.class_name,
         ...PERCEPTION_QUESTIONS.map((_, i) => pre ? items(pre.perception)[i] : ""),
+        ...PERCEPTION_QUESTIONS.map((_, i) => post ? items(post.perception)[i] : ""),
         num(c?.total), ...stages.map((k) => num(c?.breakdown[k])),
         num(c?.eco.gha), num(c?.eco.planets), ...areas.map((k) => num(c?.eco.byArea[k])),
         ...CARBON_QUESTIONS.map((q) => (c ? q.options[c.answers[q.id] ?? -1] : "")),
@@ -103,6 +107,7 @@ function Professor() {
   if (!data || !stats) return <div className="flex min-h-screen items-center justify-center text-4xl animate-pulse">🌱</div>;
   const selStudent = data.students.find((s) => s.id === sel);
   const selPre = data.responses.find((r) => r.student_id === sel && r.phase === "pre");
+  const selPost = data.responses.find((r) => r.student_id === sel && r.phase === "post");
 
   return (
     <main className="min-h-screen pb-16">
@@ -116,9 +121,10 @@ function Professor() {
         </div>
       </header>
       <div className="mx-auto max-w-6xl space-y-6 px-4 pt-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Responderam percepção" value={`${stats.pre.length}/${data.students.length}`} />
-          <Stat label="Responderam calculadora" value={`${stats.cls.k}/${data.students.length}`} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Stat label="Etapa 1 · reflexão salva" value={`${stats.pre.length}/${data.students.length}`} />
+          <Stat label="Etapa 2 · calculadora" value={`${stats.cls.k}/${data.students.length}`} />
+          <Stat label="Etapa 3 · reflexão de novo" value={`${stats.post.length}/${data.students.length}`} />
           <Stat label="Média de Terras" value={stats.cls.k ? formatTerras(stats.cls.avgPlanets) : "—"} />
           <Stat label="Etapa de maior impacto" value={stats.top ? STAGE_LABEL[stats.top] : "—"} />
         </div>
@@ -149,11 +155,12 @@ function Professor() {
           <div className="overflow-x-auto rounded-3xl bg-card shadow-soft">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left"><tr>
-                <th className="p-3">Aluno</th><th className="p-3">PIN</th><th className="p-3">Percepção</th><th className="p-3">Calculadora</th><th className="p-3">CO₂/ano</th><th className="p-3">Terras</th><th className="p-3"></th>
+                <th className="p-3">Aluno</th><th className="p-3">PIN</th><th className="p-3">Etapa 1</th><th className="p-3">Etapa 2</th><th className="p-3">Etapa 3</th><th className="p-3">CO₂/ano</th><th className="p-3">Terras</th><th className="p-3"></th>
               </tr></thead>
               <tbody>
                 {data.students.map((s) => {
                   const pre = data.responses.find((r) => r.student_id === s.id && r.phase === "pre");
+                  const post = data.responses.find((r) => r.student_id === s.id && r.phase === "post");
                   const c = carbon.find((x) => x.student_id === s.id);
                   return (
                     <tr key={s.id} className="border-t">
@@ -161,6 +168,7 @@ function Professor() {
                       <td className="p-3">{s.hasPin ? <button className="text-xs text-muted-foreground underline" onClick={async () => { if (confirm(`Redefinir o PIN de ${s.pseudonym}? O aluno criará um novo no próximo acesso.`)) { await resetFn({ data: { token, studentId: s.id } }); toast.success("PIN redefinido"); load(token); } }}>redefinir</button> : <span className="text-xs text-muted-foreground">não criado</span>}</td>
                       <td className="p-3">{pre ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{c ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
+                      <td className="p-3">{post ? <Check className="h-4 w-4 text-primary" /> : <Minus className="h-4 w-4 text-muted-foreground" />}</td>
                       <td className="p-3">{c ? formatKg(c.total) : "—"}</td>
                       <td className="p-3">{c ? nf(c.eco.planets, 1) : "—"}</td>
                       <td className="p-3">{(pre || s.seedPerception || c) && <Button size="sm" variant="outline" onClick={() => setSel(s.id)}>Ver</Button>}</td>
@@ -183,7 +191,7 @@ function Professor() {
       </div>
 
       <Dialog open={!!sel} onOpenChange={(o) => !o && setSel(null)}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogHeader><DialogTitle>{selStudent?.pseudonym}</DialogTitle></DialogHeader>
           {selStudent?.seedPerception && (
             <section className="space-y-2 border-b pb-6">
@@ -194,10 +202,17 @@ function Professor() {
             </section>
           )}
           {selPre && (
-            <section className="space-y-2 border-b pb-6">
-              <h3 className="text-xl font-bold">Percepção Ambiental</h3>
+            <section className="space-y-3 border-b pb-6">
+              <h3 className="text-xl font-bold">Reflexão: etapa 1 × etapa 3</h3>
+              {!selPost && <p className="rounded-xl bg-secondary p-3 text-sm text-secondary-foreground">O aluno ainda não fez a etapa 3.</p>}
               {PERCEPTION_QUESTIONS.map((q, i) => (
-                <div key={i} className="rounded-xl bg-muted p-3 text-sm"><p className="font-semibold">{q}</p><p className="whitespace-pre-line">{items(selPre.perception)[i]}</p></div>
+                <div key={i} className="space-y-2 rounded-xl bg-muted p-3 text-sm">
+                  <p className="font-semibold">{q}</p>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <div className="rounded-lg bg-card p-2"><p className="text-xs font-bold text-muted-foreground">Etapa 1</p><p className="whitespace-pre-line">{items(selPre.perception)[i]}</p></div>
+                    <div className="rounded-lg bg-card p-2"><p className="text-xs font-bold text-muted-foreground">Etapa 3</p><p className="whitespace-pre-line">{selPost ? items(selPost.perception)[i] : "—"}</p></div>
+                  </div>
+                </div>
               ))}
             </section>
           )}
@@ -206,12 +221,12 @@ function Professor() {
             if (!c) return null;
             return (
               <section className="space-y-4 pb-6">
-                <h3 className="text-xl font-bold">Calculadora de carbono · {formatKg(c.total)}/ano</h3>
-                <div className="flex flex-wrap gap-2 text-sm">{(Object.keys(STAGE_LABEL) as Stage[]).map((k) => <span key={k} className="rounded-full bg-muted px-3 py-1">{STAGE_LABEL[k]}: {formatKg(c.breakdown[k])}</span>)}</div>
-                <Planets value={c.eco.planets} size="sm" />
-                <FootprintDonut data={c.eco.byArea} labels={AREA_LABEL} colors={AREA_COLOR} unit="gha" />
-                <ul className="grid gap-1 text-sm sm:grid-cols-2">{CARBON_QUESTIONS.map((q) => <li key={q.id}><b>{q.id.toUpperCase()}:</b> {q.options[c.answers[q.id] ?? 0]}</li>)}</ul>
-                <Feedback text={selPre?.feedback ?? null} />
+                <h3 className="text-xl font-bold">Resultado da etapa 2, como o aluno vê</h3>
+                <CarbonResult answers={c.answers} total={c.total} breakdown={c.breakdown} eco={c.eco} cls={stats.shared} feedback={<Feedback text={selPre?.feedback ?? null} />} />
+                <details className="rounded-2xl bg-muted p-4">
+                  <summary className="cursor-pointer font-bold">Respostas da calculadora</summary>
+                  <ul className="mt-3 space-y-2 text-sm">{CARBON_QUESTIONS.map((q) => <li key={q.id}><p className="font-semibold">{q.emoji} {q.text}</p><p>{q.options[c.answers[q.id] ?? -1] ?? "—"}</p></li>)}</ul>
+                </details>
               </section>
             );
           })()}

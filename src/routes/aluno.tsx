@@ -21,8 +21,7 @@ export const Route = createFileRoute("/aluno")({
   component: Aluno,
 });
 
-// A fase "Depois da Aula" volta quando for redesenhada sobre a calculadora.
-const SHOW_POST_PHASE = false;
+const SHOW_POST_PHASE = true;
 
 type View = "home" | "pre" | "post" | "carbon" | "result-carbon";
 const items = (p: unknown) => (p as { items?: string[] })?.items ?? [];
@@ -58,7 +57,7 @@ function Aluno() {
       await submit({ data: { token, phase, perception } });
       await load(token);
       setView("home");
-      toast.success(phase === "pre" ? "Reflexão salva! Agora faça a etapa 2, a Calculadora da pegada. 🌎" : "Reflexão salva!");
+      toast.success(phase === "pre" ? "Reflexão salva! Agora faça a etapa 2, a Calculadora da pegada. 🌎" : "Pronto! Você terminou as três etapas. 💚");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) { toast.error((e as Error).message); }
     finally { setBusy(false); }
@@ -99,7 +98,7 @@ function Aluno() {
         {view === "home" && (
           <div className="space-y-6">
             <h1 className="text-3xl font-extrabold sm:text-4xl">Olá, {data.pseudonym}! 👋</h1>
-            <p className="text-lg text-muted-foreground">Sua jornada tem duas etapas. Vamos lá?</p>
+            <p className="text-lg text-muted-foreground">Sua jornada tem três etapas. Vamos lá?</p>
             <div className="grid gap-5 md:grid-cols-2">
               <PhaseCard n={1} title="Minha reflexão" desc="O que você pensa sobre o meio ambiente? Escreva com suas palavras." done={!!pre}
                 action={pre ? <Button variant="outline" onClick={() => setView("pre")}>Ver/editar reflexão</Button> : <Button size="lg" onClick={() => setView("pre")}>Começar 🚀</Button>} />
@@ -108,15 +107,15 @@ function Aluno() {
                   : carbon?.mine ? <><Button onClick={() => setView("result-carbon")}>Ver resultado</Button><Button variant="outline" onClick={() => setView("carbon")}>Refazer</Button></>
                   : <Button size="lg" onClick={() => setView("carbon")}>Começar 🌎</Button>} />
               {SHOW_POST_PHASE && (
-                <PhaseCard n={3} title="Depois da Aula" desc="Revisite sua reflexão depois da aula." done={!!post} locked={!pre}
-                  action={<Button size="lg" disabled={!pre} onClick={() => setView("post")}>{post ? "Refazer" : "Começar 🌱"}</Button>} />
+                <PhaseCard n={3} title="Minha reflexão, de novo" desc="Depois de ver a sua pegada, responda outra vez às mesmas perguntas da etapa 1. Vale mudar de ideia!" done={!!post} locked={!carbon?.mine} lockedText="Libera depois da etapa 2"
+                  action={post ? <Button variant="outline" onClick={() => setView("post")}>Ver/editar</Button> : <Button size="lg" disabled={!carbon?.mine} onClick={() => setView("post")}>Começar 🌱</Button>} />
               )}
             </div>
           </div>
         )}
 
         {view === "pre" && <Questionnaire phase="pre" busy={busy} initialPerception={pre ? items(pre.perception) : data.seedPerception ?? undefined} imported={!pre && !!data.seedPerception} onSubmit={(p) => onSubmit("pre", p)} />}
-        {view === "post" && <Questionnaire phase="post" busy={busy} previousPerception={pre ? items(pre.perception) : undefined} onSubmit={(p) => onSubmit("post", p)} />}
+        {view === "post" && <Questionnaire key="post" phase="post" busy={busy} initialPerception={post ? items(post.perception) : undefined} previousPerception={pre ? items(pre.perception) : undefined} onSubmit={(p) => onSubmit("post", p)} />}
 
         {view === "carbon" && <CarbonQuiz busy={busy} initial={carbon?.mine?.answers} onSubmit={onCarbon} />}
         {view === "result-carbon" && carbon?.mine && (
@@ -124,7 +123,10 @@ function Aluno() {
             <h1 className="text-3xl font-extrabold">Seu resultado 🌎</h1>
             <CarbonResult answers={carbon.mine.answers} total={carbon.mine.total} breakdown={carbon.mine.breakdown} eco={carbon.mine.eco} cls={carbon.cls}
               feedback={<Feedback text={data.feedback} onRetry={onRegen} busy={busy} />} />
-            <Button size="lg" className="rounded-full" onClick={() => setView("home")}>Voltar ao início</Button>
+            <div className="flex flex-wrap gap-3">
+              <Button size="lg" className="rounded-full" onClick={() => { setView("post"); window.scrollTo({ top: 0 }); }}>{post ? "Rever a etapa 3" : "Ir para a etapa 3: minha reflexão, de novo 🌱"}</Button>
+              <Button size="lg" variant="outline" className="rounded-full" onClick={() => setView("home")}>Voltar ao início</Button>
+            </div>
           </div>
         )}
       </div>
@@ -132,13 +134,13 @@ function Aluno() {
   );
 }
 
-function PhaseCard({ n, title, desc, done, locked, action }: { n: number; title: string; desc: string; done: boolean; locked?: boolean; action: React.ReactNode }) {
+function PhaseCard({ n, title, desc, done, locked, lockedText = "Libera depois da etapa 1", action }: { n: number; title: string; desc: string; done: boolean; locked?: boolean; lockedText?: string; action: React.ReactNode }) {
   return (
     <div className={`space-y-4 rounded-3xl bg-card p-6 shadow-soft transition ${locked ? "opacity-60" : "hover:-translate-y-1"}`}>
       <div className="flex items-center justify-between">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-hero font-extrabold text-primary-foreground">{n}</span>
         {done ? <span className="flex items-center gap-1 text-sm font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> Concluído</span>
-          : locked ? <span className="flex items-center gap-1 text-sm font-bold text-muted-foreground"><Lock className="h-4 w-4" /> Libera depois da etapa 1</span> : null}
+          : locked ? <span className="flex items-center gap-1 text-sm font-bold text-muted-foreground"><Lock className="h-4 w-4" /> {lockedText}</span> : null}
       </div>
       <h2 className="text-2xl font-bold">{title}</h2>
       <p className="text-muted-foreground">{desc}</p>

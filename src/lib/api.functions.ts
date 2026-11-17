@@ -63,7 +63,7 @@ async function aiFeedback(perception: string[], answers: Record<string, number>,
   const { generateResponse } = await import("@lovable.dev/ai-gateway");
   const habits = CARBON_QUESTIONS.map((q) => `- (${q.stage === "contexto" ? "Contexto" : STAGE_LABEL[q.stage]}) ${q.text} → ${q.options[answers[q.id] ?? -1] ?? "sem resposta"}`).join("\n");
   const refl = PERCEPTION_QUESTIONS.map((q, i) => `${i + 1}. ${q}\nResposta: ${perception[i] || "(em branco)"}`).join("\n");
-  const instructions = `Você é um educador ambiental que conversa com alunos do 8º ano (13-14 anos) no Brasil. Tom: encorajador, empático, acolhedor e socrático (faça perguntas que estimulem o pensamento). Nunca julgue nem culpe o aluno ou a família; reconheça que muitos hábitos dependem dos adultos e do contexto. Linguagem simples, frases curtas, em português do Brasil. Não invente dados pessoais.
+  const instructions = `Você é um educador ambiental que conversa com alunos do 8º ano (13-14 anos) no Brasil. Tom: encorajador, empático, acolhedor e socrático (faça perguntas que estimulem o pensamento). Nunca julgue nem culpe o aluno ou a família; reconheça que muitos hábitos dependem dos adultos e do contexto. Linguagem simples, frases curtas, em português do Brasil. Não use siglas nem unidades técnicas (CO₂e, gha, kg): fale em "gases que esquentam o planeta" e em "quantas Terras". Não invente dados pessoais.
 Estrutura obrigatória em Markdown:
 ## 🌱 O que eu percebi
 (valorize a preocupação ambiental que o aluno trouxe)
@@ -94,6 +94,8 @@ export const submitPhase = createServerFn({ method: "POST" })
     if (data.phase === "post") {
       const { data: pre } = await sb.from("responses").select("id").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
       if (!pre) throw new Error("Faça primeiro a etapa 1, Minha reflexão.");
+      const { data: carb } = await sb.from("carbon_responses").select("id").eq("student_id", c.sid).maybeSingle();
+      if (!carb) throw new Error("Faça primeiro a etapa 2, a Calculadora da pegada.");
     }
     const { data: cur } = await sb.from("responses").select("perception,answers,ai_feedback").eq("student_id", c.sid).eq("phase", data.phase).maybeSingle();
     const unchanged = !!cur && JSON.stringify(perceptionItems(cur.perception)) === JSON.stringify(perception);

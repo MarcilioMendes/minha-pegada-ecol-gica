@@ -12,7 +12,7 @@ export function ClassPanel({ total, breakdown, planets, cls }: Props) {
     <section className="space-y-5 rounded-3xl bg-card p-6 shadow-soft">
       <div>
         <h2 className="text-xl font-bold">👥 Eu × turma</h2>
-        <p className="text-sm text-muted-foreground">A turma real é a soma de todo mundo que respondeu. Ninguém vê o resultado de cada colega, só o total e a sua parte. Nas barras, “Turma” é a média por aluno.</p>
+        <p className="text-sm text-muted-foreground">“Turma real” é a soma de todos os colegas que já responderam. Ninguém vê o resultado de um colega, só o total e a média. Nas barras, “Turma” é a média de um aluno. Os números estão em quilos por ano de gases que esquentam o planeta.</p>
       </div>
       {cls.k === 0 ? (
         <>

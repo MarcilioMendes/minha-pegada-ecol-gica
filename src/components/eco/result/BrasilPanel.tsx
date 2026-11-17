@@ -20,7 +20,7 @@ export function BrasilPanel({ total, breakdown, cls }: Props) {
     <section className="space-y-5 rounded-3xl bg-card p-6 shadow-soft">
       <div>
         <h2 className="text-xl font-bold">🇧🇷 Eu × Brasil</h2>
-        <p className="text-sm text-muted-foreground">Cada parte da sua pegada de carbono ao lado da parte de um brasileiro médio, no setor mais parecido. Os números do Brasil são do SEEG, que calcula as emissões do país todo ano (dados de 2025). “1,5×” quer dizer uma vez e meia o brasileiro médio.</p>
+        <p className="text-sm text-muted-foreground">Cada parte da sua pegada ao lado da mesma parte de um brasileiro médio. Os números do Brasil são do SEEG, um grupo que calcula todo ano quanto gás o país solta (dados de 2025). “1,5×” quer dizer uma vez e meia o brasileiro médio; “0,5×”, a metade.</p>
       </div>
       <div className="space-y-5">
         {ROWS.map((r) => {

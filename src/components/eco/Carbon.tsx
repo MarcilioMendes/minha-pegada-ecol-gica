@@ -10,6 +10,7 @@ import { ClassPanel } from "@/components/eco/result/ClassPanel";
 import { BrasilPanel } from "@/components/eco/result/BrasilPanel";
 import { CelebPanel } from "@/components/eco/result/CelebPanel";
 import { ContasPanel } from "@/components/eco/result/ContasPanel";
+import { SummaryPanel } from "@/components/eco/result/SummaryPanel";
 
 export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<string, number> | undefined; busy: boolean; onSubmit: (a: Record<string, number>) => void }) {
   const [step, setStep] = useState(0);
@@ -57,15 +58,27 @@ export function CarbonQuiz({ initial, busy, onSubmit }: { initial?: Record<strin
 
 export function CarbonResult({ answers, total, breakdown, eco, cls, feedback }: { answers: Record<string, number>; total: number; breakdown: CarbonBreakdown; eco: EcoResult; cls: ClassAggregate; feedback: React.ReactNode }) {
   const [showCalc, setShowCalc] = useState(false);
+  const [details, setDetails] = useState(false);
   return (
     <div className="space-y-6">
-      <ScorePanel total={total} breakdown={breakdown} planets={eco.planets} />
-      <EcoPanel eco={eco} />
-      <ClassPanel total={total} breakdown={breakdown} planets={eco.planets} cls={cls} />
-      <CelebPanel total={total} breakdown={breakdown} cls={cls} showCalc={showCalc} />
-      <BrasilPanel total={total} breakdown={breakdown} cls={cls} />
+      <SummaryPanel total={total} breakdown={breakdown} planets={eco.planets} cls={cls} />
       {feedback}
-      <ContasPanel answers={answers} eco={eco} open={showCalc} onToggle={() => setShowCalc((v) => !v)} />
+      <div className="space-y-1 text-center">
+        <Button size="lg" variant="outline" className="rounded-full" onClick={() => setDetails((v) => !v)}>
+          {details ? "Esconder os detalhes" : "Quero ver mais detalhes 🔍"}
+        </Button>
+        <p className="text-sm text-muted-foreground">Números em quilos e hectares, comparação com a turma, com famosos e com o Brasil, e as contas.</p>
+      </div>
+      {details && (
+        <>
+          <ScorePanel total={total} breakdown={breakdown} planets={eco.planets} />
+          <EcoPanel eco={eco} />
+          <ClassPanel total={total} breakdown={breakdown} planets={eco.planets} cls={cls} />
+          <CelebPanel total={total} breakdown={breakdown} cls={cls} showCalc={showCalc} />
+          <BrasilPanel total={total} breakdown={breakdown} cls={cls} />
+          <ContasPanel answers={answers} eco={eco} open={showCalc} onToggle={() => setShowCalc((v) => !v)} />
+        </>
+      )}
     </div>
   );
 }
