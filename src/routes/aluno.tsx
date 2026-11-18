@@ -7,6 +7,7 @@ import { getMyData, submitPhase, regenerateFeedback, getMyCarbon, submitCarbon }
 import { CarbonQuiz, CarbonResult } from "@/components/eco/Carbon";
 import { Questionnaire } from "@/components/eco/Questionnaire";
 import { Feedback } from "@/components/eco/Feedback";
+import type { Etapa } from "@/lib/etapas";
 import { LogOut, CheckCircle2, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/aluno")({
@@ -40,9 +41,17 @@ function Aluno() {
   const [carbon, setCarbon] = useState<Awaited<ReturnType<typeof getMyCarbon>> | null>(null);
 
   const load = useCallback(async (t: string) => {
-    try { setData(await fetchData({ data: { token: t } })); setCarbon(await fetchCarbon({ data: { token: t } })); }
-    catch { localStorage.removeItem("pe_student"); nav({ to: "/" }); }
+    try { const d = await fetchData({ data: { token: t } }); setData(d); setCarbon(await fetchCarbon({ data: { token: t } })); return d; }
+    catch { localStorage.removeItem("pe_student"); nav({ to: "/" }); return null; }
   }, [fetchData, fetchCarbon, nav]);
+
+  // O professor pode trancar a etapa enquanto o aluno responde: atualiza a tela e volta ao início.
+  async function onError(e: unknown, etapa: Etapa) {
+    toast.error((e as Error).message);
+    if (!token) return;
+    const d = await load(token);
+    if (d?.locks[etapa]) setView("home");
+  }
 
   useEffect(() => {
     const t = localStorage.getItem("pe_student");
@@ -59,7 +68,7 @@ function Aluno() {
       setView("home");
       toast.success(phase === "pre" ? "Reflexão salva! Agora faça a etapa 2, a Calculadora da pegada. 🌎" : "Pronto! Você terminou as três etapas. 💚");
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) { await onError(e, phase); }
     finally { setBusy(false); }
   }
 
@@ -67,7 +76,7 @@ function Aluno() {
     if (!token) return;
     setBusy(true);
     try { await sendCarbon({ data: { token, answers } }); await load(token); setView("result-carbon"); window.scrollTo({ top: 0, behavior: "smooth" }); }
-    catch (e) { toast.error((e as Error).message); }
+    catch (e) { await onError(e, "carbon"); }
     finally { setBusy(false); }
   }
 
@@ -80,7 +89,8 @@ function Aluno() {
   }
 
   if (!data) return <div className="flex min-h-screen items-center justify-center text-4xl animate-pulse">🌱</div>;
-  const { pre, post } = data;
+  const { pre, post, locks } = data;
+  const closedBtn = <Button size="lg" disabled><Lock /> Trancada</Button>;
 
   return (
     <main className="min-h-screen pb-16">
@@ -100,31 +110,34 @@ function Aluno() {
             <h1 className="text-3xl font-extrabold sm:text-4xl">Olá, {data.pseudonym}! 👋</h1>
             <p className="text-lg text-muted-foreground">Sua jornada tem três etapas. Vamos lá?</p>
             <div className="grid gap-5 md:grid-cols-2">
-              <PhaseCard n={1} title="Minha reflexão" desc="O que você pensa sobre o meio ambiente? Escreva com suas palavras." done={!!pre}
-                action={pre ? <Button variant="outline" onClick={() => setView("pre")}>Ver/editar reflexão</Button> : <Button size="lg" onClick={() => setView("pre")}>Começar 🚀</Button>} />
-              <PhaseCard n={2} title="Calculadora da pegada" desc="Quanto CO₂ você emite por ano e quantas Terras seriam necessárias se todos vivessem como você? Compare com a turma, com famosos e com o Brasil." done={!!pre && !!carbon?.mine} locked={!pre}
-                action={!pre ? <Button size="lg" disabled>Começar 🌎</Button>
-                  : carbon?.mine ? <><Button onClick={() => setView("result-carbon")}>Ver resultado</Button><Button variant="outline" onClick={() => setView("carbon")}>Refazer</Button></>
+              <PhaseCard n={1} title="Minha reflexão" desc="O que você pensa sobre o meio ambiente? Escreva com suas palavras." done={!!pre} closed={locks.pre}
+                action={pre ? <Button variant="outline" onClick={() => setView("pre")}>{locks.pre ? "Ver reflexão" : "Ver/editar reflexão"}</Button>
+                  : locks.pre ? closedBtn : <Button size="lg" onClick={() => setView("pre")}>Começar 🚀</Button>} />
+              <PhaseCard n={2} title="Calculadora da pegada" desc="Quanto CO₂ você emite por ano e quantas Terras seriam necessárias se todos vivessem como você? Compare com a turma, com famosos e com o Brasil." done={!!pre && !!carbon?.mine} locked={!pre} closed={locks.carbon}
+                action={carbon?.mine ? <><Button onClick={() => setView("result-carbon")}>Ver resultado</Button>{!locks.carbon && <Button variant="outline" onClick={() => setView("carbon")}>Refazer</Button>}</>
+                  : locks.carbon ? closedBtn
+                  : !pre ? <Button size="lg" disabled>Começar 🌎</Button>
                   : <Button size="lg" onClick={() => setView("carbon")}>Começar 🌎</Button>} />
               {SHOW_POST_PHASE && (
-                <PhaseCard n={3} title="Minha reflexão, de novo" desc="Depois de ver a sua pegada, responda outra vez às mesmas perguntas da etapa 1. Vale mudar de ideia!" done={!!post} locked={!carbon?.mine} lockedText="Libera depois da etapa 2"
-                  action={post ? <Button variant="outline" onClick={() => setView("post")}>Ver/editar</Button> : <Button size="lg" disabled={!carbon?.mine} onClick={() => setView("post")}>Começar 🌱</Button>} />
+                <PhaseCard n={3} title="Minha reflexão, de novo" desc="Depois de ver a sua pegada, responda outra vez às mesmas perguntas da etapa 1. Vale mudar de ideia!" done={!!post} locked={!carbon?.mine} lockedText="Libera depois da etapa 2" closed={locks.post}
+                  action={post ? <Button variant="outline" onClick={() => setView("post")}>{locks.post ? "Ver reflexão" : "Ver/editar"}</Button>
+                    : locks.post ? closedBtn : <Button size="lg" disabled={!carbon?.mine} onClick={() => setView("post")}>Começar 🌱</Button>} />
               )}
             </div>
           </div>
         )}
 
-        {view === "pre" && <Questionnaire phase="pre" busy={busy} initialPerception={pre ? items(pre.perception) : data.seedPerception ?? undefined} imported={!pre && !!data.seedPerception} onSubmit={(p) => onSubmit("pre", p)} />}
-        {view === "post" && <Questionnaire key="post" phase="post" busy={busy} initialPerception={post ? items(post.perception) : undefined} previousPerception={pre ? items(pre.perception) : undefined} onSubmit={(p) => onSubmit("post", p)} />}
+        {view === "pre" && <Questionnaire phase="pre" busy={busy} readOnly={locks.pre} onClose={() => setView("home")} initialPerception={pre ? items(pre.perception) : data.seedPerception ?? undefined} imported={!pre && !!data.seedPerception} onSubmit={(p) => onSubmit("pre", p)} />}
+        {view === "post" && <Questionnaire key="post" phase="post" busy={busy} readOnly={locks.post} onClose={() => setView("home")} initialPerception={post ? items(post.perception) : undefined} previousPerception={pre ? items(pre.perception) : undefined} onSubmit={(p) => onSubmit("post", p)} />}
 
-        {view === "carbon" && <CarbonQuiz busy={busy} initial={carbon?.mine?.answers} onSubmit={onCarbon} />}
+        {view === "carbon" && !locks.carbon && <CarbonQuiz busy={busy} initial={carbon?.mine?.answers} onSubmit={onCarbon} />}
         {view === "result-carbon" && carbon?.mine && (
           <div className="space-y-6">
             <h1 className="text-3xl font-extrabold">Seu resultado 🌎</h1>
             <CarbonResult answers={carbon.mine.answers} total={carbon.mine.total} breakdown={carbon.mine.breakdown} eco={carbon.mine.eco} cls={carbon.cls}
               feedback={<Feedback text={data.feedback} onRetry={onRegen} busy={busy} />} />
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" className="rounded-full" onClick={() => { setView("post"); window.scrollTo({ top: 0 }); }}>{post ? "Rever a etapa 3" : "Ir para a etapa 3: minha reflexão, de novo 🌱"}</Button>
+              {(post || !locks.post) && <Button size="lg" className="rounded-full" onClick={() => { setView("post"); window.scrollTo({ top: 0 }); }}>{post ? "Rever a etapa 3" : "Ir para a etapa 3: minha reflexão, de novo 🌱"}</Button>}
               <Button size="lg" variant="outline" className="rounded-full" onClick={() => setView("home")}>Voltar ao início</Button>
             </div>
           </div>
@@ -134,13 +147,16 @@ function Aluno() {
   );
 }
 
-function PhaseCard({ n, title, desc, done, locked, lockedText = "Libera depois da etapa 1", action }: { n: number; title: string; desc: string; done: boolean; locked?: boolean; lockedText?: string; action: React.ReactNode }) {
+function PhaseCard({ n, title, desc, done, locked, lockedText = "Libera depois da etapa 1", closed, action }: { n: number; title: string; desc: string; done: boolean; locked?: boolean; lockedText?: string; closed?: boolean; action: React.ReactNode }) {
   return (
-    <div className={`space-y-4 rounded-3xl bg-card p-6 shadow-soft transition ${locked ? "opacity-60" : "hover:-translate-y-1"}`}>
-      <div className="flex items-center justify-between">
+    <div className={`space-y-4 rounded-3xl bg-card p-6 shadow-soft transition ${locked || (closed && !done) ? "opacity-60" : "hover:-translate-y-1"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-hero font-extrabold text-primary-foreground">{n}</span>
-        {done ? <span className="flex items-center gap-1 text-sm font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> Concluído</span>
-          : locked ? <span className="flex items-center gap-1 text-sm font-bold text-muted-foreground"><Lock className="h-4 w-4" /> {lockedText}</span> : null}
+        <div className="flex flex-wrap items-center gap-3">
+          {done ? <span className="flex items-center gap-1 text-sm font-bold text-primary"><CheckCircle2 className="h-4 w-4" /> Concluído</span>
+            : locked && !closed ? <span className="flex items-center gap-1 text-sm font-bold text-muted-foreground"><Lock className="h-4 w-4" /> {lockedText}</span> : null}
+          {closed && <span className="flex items-center gap-1 text-sm font-bold text-muted-foreground"><Lock className="h-4 w-4" /> Trancada pelo professor</span>}
+        </div>
       </div>
       <h2 className="text-2xl font-bold">{title}</h2>
       <p className="text-muted-foreground">{desc}</p>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { PERCEPTION_QUESTIONS } from "@/lib/footprint";
-import { ArrowLeft, ArrowRight, Leaf } from "lucide-react";
+import { ArrowLeft, ArrowRight, Leaf, Lock } from "lucide-react";
 
 type Props = {
   phase: "pre" | "post";
@@ -12,18 +12,26 @@ type Props = {
   onSubmit: (perception: string[]) => Promise<void>;
   busy: boolean;
   imported?: boolean;
+  /** Etapa trancada pelo professor: mostra as respostas sem deixar editar. */
+  readOnly?: boolean;
+  onClose?: () => void;
 };
 
-export function Questionnaire({ phase, initialPerception, previousPerception, onSubmit, busy, imported }: Props) {
+export function Questionnaire({ phase, initialPerception, previousPerception, onSubmit, busy, imported, readOnly, onClose }: Props) {
   const steps = PERCEPTION_QUESTIONS.length;
   const [step, setStep] = useState(0);
   const [perception, setPerception] = useState<string[]>(initialPerception ?? PERCEPTION_QUESTIONS.map(() => ""));
-  const canNext = (perception[step] ?? "").trim().length >= 3;
+  const canNext = readOnly || (perception[step] ?? "").trim().length >= 3;
   const last = step === steps - 1;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      {imported && (
+      {readOnly && (
+        <div className="flex items-center gap-2 rounded-2xl bg-secondary p-4 text-sm text-secondary-foreground">
+          <Lock className="h-4 w-4 shrink-0" /> O professor trancou esta etapa. Você pode ler o que escreveu, mas não pode mudar.
+        </div>
+      )}
+      {imported && !readOnly && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-secondary p-4 text-sm text-secondary-foreground">
           <span>📋 Trouxemos as respostas que você já deu na atividade anterior. Leia, ajuste se quiser e salve.</span>
           <Button size="sm" variant="outline" className="rounded-full" disabled={busy} onClick={() => onSubmit(perception)}>Confirmar e salvar <ArrowRight /></Button>
@@ -48,8 +56,9 @@ export function Questionnaire({ phase, initialPerception, previousPerception, on
         <Textarea
           rows={5}
           value={perception[step]}
+          readOnly={readOnly}
           onChange={(e) => setPerception((p) => p.map((v, i) => (i === step ? e.target.value : v)))}
-          placeholder="Escreva com suas palavras... não existe resposta errada 💚"
+          placeholder={readOnly ? "" : "Escreva com suas palavras... não existe resposta errada 💚"}
           className="rounded-2xl text-base"
         />
         {!canNext && <p className="mt-2 text-sm text-muted-foreground">Escreva pelo menos uma palavra para continuar.</p>}
@@ -57,7 +66,9 @@ export function Questionnaire({ phase, initialPerception, previousPerception, on
 
       <div className="flex justify-between">
         <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}><ArrowLeft /> Voltar</Button>
-        {last ? (
+        {last && readOnly ? (
+          <Button size="lg" variant="outline" className="rounded-full" onClick={onClose}>Voltar ao início</Button>
+        ) : last ? (
           <Button size="lg" className="rounded-full" disabled={!canNext || busy} onClick={() => onSubmit(perception)}>
             {busy ? "Salvando..." : "Salvar minha reflexão 💚"}
           </Button>

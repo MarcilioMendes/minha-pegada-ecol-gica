@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin, teacherCarbon } from "@/lib/api.functions";
+import { Switch } from "@/components/ui/switch";
+import { teacherLogin, teacherOverview, teacherAddStudents, teacherResetPin, teacherCarbon, teacherSetLock } from "@/lib/api.functions";
+import { ETAPAS, ETAPA_LABEL, type Etapa } from "@/lib/etapas";
 import { AREA_LABEL, PERCEPTION_QUESTIONS, aggregateClass, shareableClass, formatTerras, type Area } from "@/lib/footprint";
 import { FootprintDonut, AREA_COLOR } from "@/components/eco/FootprintChart";
 import { BRASIL, formatKg, nf, STAGE_LABEL, CARBON_QUESTIONS, CELEBS, topKey, type Stage } from "@/lib/carbon";
 import { Feedback } from "@/components/eco/Feedback";
 import { CarbonResult } from "@/components/eco/Carbon";
 import { csvCell } from "@/lib/csv";
-import { Download, LogOut, UserPlus, Check, Minus } from "lucide-react";
+import { Download, LogOut, UserPlus, Check, Minus, Lock, LockOpen } from "lucide-react";
 
 export const Route = createFileRoute("/professor")({
   head: () => ({
@@ -42,6 +44,19 @@ function Professor() {
   const [newList, setNewList] = useState("");
   const carbonFn = useServerFn(teacherCarbon);
   const [carbon, setCarbon] = useState<Awaited<ReturnType<typeof teacherCarbon>>>([]);
+  const lockFn = useServerFn(teacherSetLock);
+  const [lockBusy, setLockBusy] = useState<Etapa | null>(null);
+
+  async function toggleLock(stage: Etapa, locked: boolean) {
+    if (!token) return;
+    setLockBusy(stage);
+    try {
+      const r = await lockFn({ data: { token, stage, locked } });
+      setData((d) => (d ? { ...d, locks: r.locks } : d));
+      toast.success(locked ? `${ETAPA_LABEL[stage]} trancada` : `${ETAPA_LABEL[stage]} destrancada`);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setLockBusy(null); }
+  }
 
   const load = useCallback(async (t: string) => {
     try { setData(await overviewFn({ data: { token: t } })); setCarbon(await carbonFn({ data: { token: t } })); }
@@ -155,7 +170,9 @@ function Professor() {
           <div className="overflow-x-auto rounded-3xl bg-card shadow-soft">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left"><tr>
-                <th className="p-3">Aluno</th><th className="p-3">PIN</th><th className="p-3">Etapa 1</th><th className="p-3">Etapa 2</th><th className="p-3">Etapa 3</th><th className="p-3">CO₂/ano</th><th className="p-3">Terras</th><th className="p-3"></th>
+                <th className="p-3">Aluno</th><th className="p-3">PIN</th>
+                {ETAPAS.map((e, i) => <th key={e} className="p-3"><span className="inline-flex items-center gap-1">Etapa {i + 1}{data.locks[e] && <Lock className="h-3 w-3" aria-label="trancada" />}</span></th>)}
+                <th className="p-3">CO₂/ano</th><th className="p-3">Terras</th><th className="p-3"></th>
               </tr></thead>
               <tbody>
                 {data.students.map((s) => {
@@ -178,7 +195,28 @@ function Professor() {
               </tbody>
             </table>
           </div>
-          <div className="h-fit space-y-3 rounded-3xl bg-card p-6 shadow-soft">
+          <div className="h-fit space-y-6">
+          <div className="space-y-3 rounded-3xl bg-card p-6 shadow-soft">
+            <h2 className="flex items-center gap-2 font-bold"><Lock className="h-5 w-5" /> Trancar etapas</h2>
+            <p className="text-sm text-muted-foreground">Etapa trancada não aceita respostas novas nem mudanças. Os alunos ainda veem o que já enviaram.</p>
+            <ul className="space-y-2">
+              {ETAPAS.map((e) => {
+                const locked = data.locks[e];
+                return (
+                  <li key={e} className="flex items-center justify-between gap-3 rounded-xl bg-muted p-3">
+                    <label htmlFor={`lock-${e}`} className="text-sm">
+                      <span className="block font-semibold">{ETAPA_LABEL[e]}</span>
+                      <span className={`flex items-center gap-1 text-xs ${locked ? "font-bold text-destructive" : "text-muted-foreground"}`}>
+                        {locked ? <><Lock className="h-3 w-3" /> Trancada</> : <><LockOpen className="h-3 w-3" /> Aberta</>}
+                      </span>
+                    </label>
+                    <Switch id={`lock-${e}`} checked={locked} disabled={lockBusy !== null} onCheckedChange={(v) => toggleLock(e, v)} aria-label={`Trancar ${ETAPA_LABEL[e]}`} />
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <div className="space-y-3 rounded-3xl bg-card p-6 shadow-soft">
             <h2 className="flex items-center gap-2 font-bold"><UserPlus className="h-5 w-5" /> Cadastrar alunos</h2>
             <p className="text-sm text-muted-foreground">Um pseudônimo por linha ou separados por vírgula (ex: A031, A032).</p>
             <Textarea value={newList} onChange={(e) => setNewList(e.target.value)} rows={4} />
@@ -186,6 +224,7 @@ function Professor() {
               try { const r = await addFn({ data: { token, pseudonyms: newList.split(/[\s,;]+/), className: "81" } }); toast.success(`${r.added} pseudônimo(s) processado(s)`); setNewList(""); load(token); }
               catch (e) { toast.error((e as Error).message); }
             }}>Adicionar</Button>
+          </div>
           </div>
         </div>
       </div>
