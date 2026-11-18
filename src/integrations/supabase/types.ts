@@ -96,6 +96,24 @@ export type Database = {
           },
         ]
       }
+      stage_locks: {
+        Row: {
+          locked: boolean
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          locked?: boolean
+          stage: string
+          updated_at?: string
+        }
+        Update: {
+          locked?: boolean
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           class_name: string

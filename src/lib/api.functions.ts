@@ -1,10 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { PERCEPTION_QUESTIONS, AREA_LABEL, computeEcological, formatTerras, aggregateClass, shareableClass, type EcoResult } from "./footprint";
 import { computeCarbon, CARBON_QUESTIONS, STAGE_LABEL, topKey, type CarbonBreakdown } from "./carbon";
+import { isEtapa, locksFrom, LOCKED_MESSAGE, NO_LOCKS, type Etapa, type Locks } from "./etapas";
 
 const db = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 const sess = () => import("./session.server");
 const norm = (p: string) => p.trim().toUpperCase();
+
+// Etapas trancadas pelo professor. Se a leitura falhar, nada fica trancado: o aluno não perde o acesso.
+async function readLocks(sb: Awaited<ReturnType<typeof db>>): Promise<Locks> {
+  const { data, error } = await sb.from("stage_locks").select("stage,locked");
+  if (error) { console.error("stage_locks read error", error); return { ...NO_LOCKS }; }
+  return locksFrom(data ?? []);
+}
+
+async function assertUnlocked(sb: Awaited<ReturnType<typeof db>>, etapa: Etapa) {
+  if ((await readLocks(sb))[etapa]) throw new Error(LOCKED_MESSAGE);
+}
 
 export const studentLogin = createServerFn({ method: "POST" })
   .inputValidator((d: { pseudonym: string; pin: string }) => d)
@@ -46,6 +58,7 @@ export const getMyData = createServerFn({ method: "POST" })
       pre: perceptionOf(rows?.find((r) => r.phase === "pre")),
       feedback: currentFeedback(rows?.find((r) => r.phase === "pre")),
       post: perceptionOf(rows?.find((r) => r.phase === "post")),
+      locks: await readLocks(sb),
     };
   });
 
@@ -91,6 +104,7 @@ export const submitPhase = createServerFn({ method: "POST" })
     if (data.phase !== "pre" && data.phase !== "post") throw new Error("Fase inválida");
     const perception = PERCEPTION_QUESTIONS.map((_, i) => String(data.perception[i] ?? "").slice(0, 2000));
     const sb = await db();
+    await assertUnlocked(sb, data.phase);
     if (data.phase === "post") {
       const { data: pre } = await sb.from("responses").select("id").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
       if (!pre) throw new Error("Faça primeiro a etapa 1, Minha reflexão.");
@@ -146,7 +160,19 @@ export const teacherOverview = createServerFn({ method: "POST" })
     return {
       students: (students ?? []).map((s) => ({ id: s.id, pseudonym: s.pseudonym, class_name: s.class_name, hasPin: !!s.pin_hash, seedPerception: (s.seed_perception as { items?: string[] } | null)?.items ?? null })),
       responses: (responses ?? []).map((r) => ({ id: r.id, student_id: r.student_id, phase: r.phase, perception: r.perception as { items?: string[] }, feedback: currentFeedback(r) })),
+      locks: await readLocks(sb),
     };
+  });
+
+export const teacherSetLock = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; stage: Etapa; locked: boolean }) => d)
+  .handler(async ({ data }) => {
+    await (await sess()).requireTeacher(data.token);
+    if (!isEtapa(data.stage) || typeof data.locked !== "boolean") throw new Error("Etapa inválida");
+    const sb = await db();
+    const { error } = await sb.from("stage_locks").upsert({ stage: data.stage, locked: data.locked, updated_at: new Date().toISOString() }, { onConflict: "stage" });
+    if (error) { console.error("stage_locks write error", error); throw new Error("Não foi possível salvar. Tente de novo."); }
+    return { locks: await readLocks(sb) };
   });
 
 export const teacherAddStudents = createServerFn({ method: "POST" })
@@ -198,6 +224,7 @@ export const submitCarbon = createServerFn({ method: "POST" })
     const answers: Record<string, number> = Object.fromEntries(CARBON_QUESTIONS.map((q) => [q.id, data.answers[q.id] ?? 0]));
     const { total, breakdown } = computeCarbon(answers);
     const sb = await db();
+    await assertUnlocked(sb, "carbon");
     const { data: pre } = await sb.from("responses").select("id,perception").eq("student_id", c.sid).eq("phase", "pre").maybeSingle();
     if (!pre) throw new Error("Faça primeiro a etapa 1, Minha reflexão.");
     const { error } = await sb.from("carbon_responses").upsert(
